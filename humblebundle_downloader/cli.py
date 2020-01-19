@@ -56,7 +56,7 @@ def cli():
 
     cli_args = parser.parse_args()
 
-    if cli_args.action == 'gen-cookie':
+    if cli_args.action == 'gen-cookies':
         from .generate_cookie import generate_cookie
         generate_cookie(cli_args.cookie_file)
 
