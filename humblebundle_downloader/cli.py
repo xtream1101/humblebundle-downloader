@@ -20,8 +20,8 @@ def cli():
     # Generate cookie
     ###
     parser_gencookie = subparsers.add_parser(
-        'gen-cookie',
-        help="Generate cookie used to access your library",
+        'gen-cookies',
+        help="Generate cookies used to access your library",
     )
     parser_gencookie.add_argument(
         '-c', '--cookie-file', type=str,

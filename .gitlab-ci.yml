@@ -3,18 +3,20 @@ image: python:3
 stages:
   - test
   - release
-  - tag
+  - package
 
 flake8:
   stage: test
+  except:
+    - tags
   script:
     - pip install tox
     - tox -e flake8
 
-release-package:
-  stage: release
+pypi-package:
+  stage: package
   only:
-    - master
+    - tags
   script:
     - pip install twine
     - rm -f dist/*
@@ -28,7 +30,7 @@ release-package:
     git remote set-url origin "https://gitlab-ci-token:${CI_TAG_UPLOAD_TOKEN}@${url_host}"
 
 tag:
-  stage: tag
+  stage: release
   only:
     - master
   script:
