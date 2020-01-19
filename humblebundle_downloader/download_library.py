@@ -14,7 +14,7 @@ def _clean_name(dirty_str):
         if c.isalpha() or c.isdigit() or c in allowed_chars:
             clean.append(c)
 
-    return "".join(c.strip())
+    return "".join(clean).strip()
 
 
 def download_library(cookie_path, library_path, progress_bar=False):

@@ -11,7 +11,7 @@ def _get_cookie_str(driver):
     raw_cookies = driver.get_cookies()
     baked_cookies = ''
     for cookie in raw_cookies:
-        baked_cookies += cookie['name'] + "=" + {cookie['value'] + ";"
+        baked_cookies += cookie['name'] + "=" + cookie['value'] + ";"
     # Remove the trailing ;
     return baked_cookies[:-1]
 
