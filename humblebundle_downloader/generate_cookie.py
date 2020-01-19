@@ -11,7 +11,7 @@ def _get_cookie_str(driver):
     raw_cookies = driver.get_cookies()
     baked_cookies = ''
     for cookie in raw_cookies:
-        baked_cookies += f"{cookie['name']}={cookie['value']};"
+        baked_cookies += cookie['name'] + "=" + {cookie['value'] + ";"
     # Remove the trailing ;
     return baked_cookies[:-1]
 
@@ -34,6 +34,6 @@ def generate_cookie(cookie_path):
     with open(cookie_path, 'w') as f:
         f.write(cookie_str)
 
-    logger.info(f"Saved cookie to {cookie_path}")
+    logger.info("Saved cookies to " + cookie_path)
 
     driver.quit()

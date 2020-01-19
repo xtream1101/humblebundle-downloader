@@ -32,19 +32,19 @@ def download_library(cookie_path, library_path, progress_bar=False):
 
     library_r = requests.get('https://www.humblebundle.com/home/library',
                              headers={'cookie': account_cookies})
-    logger.debug(f"Library request: {library_r}")
+    logger.debug("Library request: " + str(library_r))
     library_page = parsel.Selector(text=library_r.text)
     orders_json = json.loads(library_page.css('#user-home-json-data')
                                          .xpath('string()').extract_first())
 
     for order_id in orders_json['gamekeys']:
-        order_url = f'https://www.humblebundle.com/api/v1/order/{order_id}?all_tpkds=true'  # noqa: E501
+        order_url = 'https://www.humblebundle.com/api/v1/order/{order_id}?all_tpkds=true'.format(order_id=order_id)  # noqa: E501
         order_r = requests.get(order_url,
                                headers={'cookie': account_cookies})
-        logger.debug(f"Order request: {order_r}")
+        logger.debug("Order request: " + str(order_r))
         order = order_r.json()
         bundle_title = _clean_name(order['product']['human_name'])
-        logger.info(f"Checking bundle: {bundle_title}")
+        logger.info("Checking bundle: " + str(bundle_title))
         for item in order['subproducts']:
             item_title = _clean_name(item['human_name'])
             # Get all types of download for a product
@@ -63,9 +63,11 @@ def download_library(cookie_path, library_path, progress_bar=False):
                 for file_type in download_type['download_struct']:
                     url = file_type['url']['web']
                     ext = url.split('?')[0].split('.')[-1]
-                    filename = os.path.join(item_folder, f"{item_title}.{ext}")
+                    file_title = item_title + "." + ext
+                    filename = os.path.join(item_folder, file_title)
                     item_r = requests.get(url, stream=True)
-                    logger.debug(f"Item request: {item_r}, Url: {url}")
+                    logger.debug("Item request: {item_r}, Url: {url}"
+                                 .format(item_r=item_r, url=url))
                     # Not sure which value will be best to use, so use them all
                     file_info = {
                         'md5': file_type.get('md5'),
@@ -76,7 +78,8 @@ def download_library(cookie_path, library_path, progress_bar=False):
                     }
                     if file_info != cache_data.get(filename, {}):
                         if not progress_bar:
-                            logger.info(f"Downloading: {item_title}.{ext}")
+                            logger.info("Downloading: {file_title}"
+                                        .format(file_title=file_title))
 
                         with open(filename, 'wb') as outfile:
                             total_length = item_r.headers.get('content-length')
@@ -91,7 +94,12 @@ def download_library(cookie_path, library_path, progress_bar=False):
                                     pb_width = 50
                                     done = int(pb_width * dl / total_length)
                                     if progress_bar:
-                                        print(f"Downloading: {item_title}.{ext}: {int(done * (100 / pb_width))}% [{'=' * done}{' ' * (pb_width-done)}]", end='\r')  # noqa: E501, E701
+                                        print("Downloading: {file_title}: {percent}% [{filler}{space}]"  # noqa E501
+                                              .format(file_title=file_title,
+                                                      percent=int(done * (100 / pb_width)),  # noqa E501
+                                                      filler='=' * done,
+                                                       space=' ' * (pb_width - done),  # noqa E501
+                                                      ), end='\r')
 
                         if progress_bar:
                             # print new line so next progress bar

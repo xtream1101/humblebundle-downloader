@@ -26,7 +26,7 @@ def cli():
     parser_gencookie.add_argument(
         '-c', '--cookie-file', type=str,
         help="Location of the file to store the cookie",
-        default="hbd-cookies.txt",
+        required=True,
     )
 
     ###
@@ -40,8 +40,8 @@ def cli():
     )
     parser_download.add_argument(
         '-c', '--cookie-file', type=str,
-        help="Location of the file to store the cookie",
-        default="hbd-cookies.txt",
+        help="Location of the cookies file",
+        required=True,
     )
     parser_download.add_argument(
         '-l', '--library-path', type=str,
