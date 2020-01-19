@@ -1,5 +1,5 @@
 from setuptools import setup
-from _version import __version__
+from humblebundle_downloader._version import __version__
 
 
 with open('README.md', 'r') as f:
