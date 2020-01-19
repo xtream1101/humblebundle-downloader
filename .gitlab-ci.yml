@@ -33,6 +33,6 @@ tag:
     - master
   script:
     - *write_permission
-    - export VERSION=$(echo $(python -c "import humblebundle_downloader._version; print(_version.__version__)"))
+    - export VERSION=$(echo $(python -c "import humblebundle_downloader._version as v; print(v.__version__)"))
     - git tag -a $VERSION -m "Version created by gitlab-ci Build"
     - git push origin $VERSION
