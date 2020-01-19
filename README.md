@@ -5,8 +5,10 @@ The very first time this runs it may take a while to download everything, but af
 
 ## Features
 - Download new or updated content in your Library
+- cli command for easy use
 - Progress bar for each download _(with the `--progress` flag)_
 - Easy cookie generation so script
+
 
 ## Install
 `pip install humblebundle-downloader`
