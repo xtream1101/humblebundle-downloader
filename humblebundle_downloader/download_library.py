@@ -68,8 +68,8 @@ def download_library(cookie_path, library_path, progress_bar=False):
                     logger.debug(f"Item request: {item_r}, Url: {url}")
                     # Not sure which value will be best to use, so use them all
                     file_info = {
-                        'md5': file_type['md5'],
-                        'sha1': file_type['sha1'],
+                        'md5': file_type.get('md5'),
+                        'sha1': file_type.get('sha1'),
                         'url_last_modified': item_r.headers['Last-Modified'],
                         'url_etag': item_r.headers['ETag'][1:-1],
                         'url_crc': item_r.headers['X-HW-Cache-CRC'],
