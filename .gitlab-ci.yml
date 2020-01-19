@@ -3,6 +3,7 @@ image: python:3
 stages:
   - test
   - release
+  - tag
 
 flake8:
   stage: test
@@ -27,7 +28,7 @@ release-package:
     git remote set-url origin "https://gitlab-ci-token:${CI_TAG_UPLOAD_TOKEN}@${url_host}"
 
 tag:
-  stage: release
+  stage: tag
   only:
     - master
   script:

@@ -20,7 +20,8 @@ def generate_cookie(cookie_path):
     gdd = ChromeDriverDownloader()
     chrome_driver = gdd.download_and_install()
 
-    # TODO: load previous cookies so it does not ask to re verify using an email code each time
+    # TODO: load previous cookies so it does not ask to re verify using an
+    # email code each time
     driver = webdriver.Chrome(executable_path=chrome_driver[1])
 
     driver.get('https://www.humblebundle.com/login')
