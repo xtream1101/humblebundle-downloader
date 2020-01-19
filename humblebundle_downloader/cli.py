@@ -57,11 +57,11 @@ def cli():
     cli_args = parser.parse_args()
 
     if cli_args.action == 'gen-cookie':
-        from . import generate_cookie
+        from .generate_cookie import generate_cookie
         generate_cookie(cli_args.cookie_file)
 
     elif cli_args.action == 'download':
-        from . import download_library
+        from .download_library import download_library
         download_library(
             cli_args.cookie_file,
             cli_args.library_path,
