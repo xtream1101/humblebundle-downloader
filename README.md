@@ -1,4 +1,8 @@
 # Humble Bundle Downloader
+[![PyPI](https://img.shields.io/pypi/v/humblebundle-downloader.svg)](https://pypi.python.org/pypi/humblebundle-downloader)
+[![PyPI](https://img.shields.io/pypi/l/humblebundle-downloader.svg)](https://pypi.python.org/pypi/humblebundle-downloader)  
+
+
 Download all of you content from your Humble Bundle Library.  
 
 The very first time this runs it may take a while to download everything, but after that it will only download the content that is missing.  
