@@ -18,7 +18,8 @@ def _clean_name(dirty_str):
 
 
 def download_library(cookie_path, library_path, progress_bar=False,
-                     ext_include=None, ext_exclude=None, platform_include=None):
+                     ext_include=None, ext_exclude=None, platform_include=None,
+                     purchase_keys=None):
     if ext_include is None:
         ext_include = []
     ext_include = list(map(str.lower, ext_include))
@@ -44,14 +45,16 @@ def download_library(cookie_path, library_path, progress_bar=False,
     except FileNotFoundError:
         cache_data = {}
 
-    library_r = requests.get('https://www.humblebundle.com/home/library',
-                             headers={'cookie': account_cookies})
-    logger.debug("Library request: " + str(library_r))
-    library_page = parsel.Selector(text=library_r.text)
-    orders_json = json.loads(library_page.css('#user-home-json-data')
-                                         .xpath('string()').extract_first())
+    if not purchase_keys:
+        library_r = requests.get('https://www.humblebundle.com/home/library',
+                                 headers={'cookie': account_cookies})
+        logger.debug("Library request: " + str(library_r))
+        library_page = parsel.Selector(text=library_r.text)
+        orders_json = json.loads(library_page.css('#user-home-json-data')
+                                             .xpath('string()').extract_first())
+        purchase_keys = orders_json['gamekeys']
 
-    for order_id in orders_json['gamekeys']:
+    for order_id in purchase_keys:
         order_url = 'https://www.humblebundle.com/api/v1/order/{order_id}?all_tpkds=true'.format(order_id=order_id)  # noqa: E501
         order_r = requests.get(order_url,
                                headers={'cookie': account_cookies})
@@ -88,15 +91,16 @@ def download_library(cookie_path, library_path, progress_bar=False,
                                     + "/" + item_title)
                         continue
 
-                    ext = url.split('?')[0].split('.')[-1]
-                    file_title = item_title + "." + ext
+                    url_filename = url.split('?')[0].split('/')[-1]
+                    cache_file_key = order_id + ':' + url_filename
+                    ext = url_filename.split('.')[-1]
                     # Only get the file types we care about
                     if ((ext_include and ext.lower() not in ext_include)
                             or (ext_exclude and ext.lower() in ext_exclude)):
-                        logger.info("Skipping the file " + file_title)
+                        logger.info("Skipping the file " + url_filename)
                         continue
 
-                    filename = os.path.join(item_folder, file_title)
+                    filename = os.path.join(item_folder, url_filename)
                     item_r = requests.get(url, stream=True)
                     logger.debug("Item request: {item_r}, Url: {url}"
                                  .format(item_r=item_r, url=url))
@@ -108,10 +112,11 @@ def download_library(cookie_path, library_path, progress_bar=False,
                         'url_etag': item_r.headers['ETag'][1:-1],
                         'url_crc': item_r.headers['X-HW-Cache-CRC'],
                     }
-                    if file_info != cache_data.get(filename, {}):
+                    if file_info != cache_data.get(cache_file_key, {}):
                         if not progress_bar:
-                            logger.info("Downloading: {file_title}"
-                                        .format(file_title=file_title))
+                            logger.info("Downloading: {item_title}/{url_filename}"
+                                        .format(item_title=item_title,
+                                                url_filename=url_filename))
 
                         with open(filename, 'wb') as outfile:
                             total_length = item_r.headers.get('content-length')
@@ -126,8 +131,9 @@ def download_library(cookie_path, library_path, progress_bar=False,
                                     pb_width = 50
                                     done = int(pb_width * dl / total_length)
                                     if progress_bar:
-                                        print("Downloading: {file_title}: {percent}% [{filler}{space}]"  # noqa E501
-                                              .format(file_title=file_title,
+                                        print("Downloading: {item_title}/{url_filename}: {percent}% [{filler}{space}]"  # noqa E501
+                                              .format(item_title=item_title,
+                                                      url_filename=url_filename,
                                                       percent=int(done * (100 / pb_width)),  # noqa E501
                                                       filler='=' * done,
                                                        space=' ' * (pb_width - done),  # noqa E501
@@ -138,7 +144,7 @@ def download_library(cookie_path, library_path, progress_bar=False,
                             # is on its own line
                             print()
 
-                        cache_data[filename] = file_info
+                        cache_data[cache_file_key] = file_info
                         # Update cache file with newest data so if the script
                         # quits it can keep track of the progress
                         with open(cache_file, 'w') as outfile:

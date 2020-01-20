@@ -44,10 +44,11 @@ Use the following command to download your Humble Bundle Library:
 `hbd download --cookie-file hbd-cookies.txt --library-path "Downloaded Library" --progress`  
 
 This directory structure will be used:  
-`Downloaded Library/Bundle Name/Bundle Item.ext`
+`Downloaded Library/Purchase Name/Item Name/downloaded_file.ext`
 
 
 ## Notes
 * Inside your library folder a file named `.cache.json` is saved and keeps track of the files that have been downloaded. This way running the download command again pointing to the same directory will only download new or updated files.
 * Use `--help` with all `hbd` commands to see available options
 * Find supported platforms for the `--platform` flag by visiting your Humble Bundle Library and look under the **Platform** dropdown
+* Download select bundles by using the `-k` or `--keys` flag. Find these keys by going to your *Purchases* section, click on a products and there should be a `downloads?key=XXXX` in the url.

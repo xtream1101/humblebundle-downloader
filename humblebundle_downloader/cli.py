@@ -71,6 +71,12 @@ def cli():
         type=str, nargs='*',
         help="Only download files with these extensions. Ex: -i pdf mobi",
     )
+    parser_download.add_argument(
+        '-k', '--keys',
+        type=str, nargs='*',
+        help=("The purchase download key. Find in the url on the "
+              "products/bundle download page. Can set multiple"),
+    )
 
     cli_args = parser.parse_args()
 
@@ -87,4 +93,5 @@ def cli():
             ext_include=cli_args.include,
             ext_exclude=cli_args.exclude,
             platform_include=cli_args.platform,
+            purchase_keys=cli_args.keys,
         )
