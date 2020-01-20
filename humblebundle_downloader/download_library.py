@@ -114,7 +114,7 @@ def download_library(cookie_path, library_path, progress_bar=False,
                     }
                     if file_info != cache_data.get(cache_file_key, {}):
                         if not progress_bar:
-                            logger.info("Downloading: {item_title}/{url_filename}"
+                            logger.info("Downloading: {item_title}/{url_filename}"  # noqa: E501
                                         .format(item_title=item_title,
                                                 url_filename=url_filename))
 
