@@ -49,6 +49,12 @@ def cli():
         required=True,
     )
     parser_download.add_argument(
+        '-p', '--platform',
+        type=str, nargs='*',
+        help=("Only get content in a platform. Values can be seen in your "
+              "humble bundle's library dropdown. Ex: -p ebook video"),
+    )
+    parser_download.add_argument(
         '--progress',
         action='store_true',
         help="Display progress bar for downloads",
@@ -57,12 +63,13 @@ def cli():
     filter_ext.add_argument(
         '-e', '--exclude',
         type=str, nargs='*',
-        help="File extensions to ignore when downloading files. Ex: -e pdf mobi"
+        help=("File extensions to ignore when downloading files. "
+              "Ex: -e pdf mobi"),
     )
     filter_ext.add_argument(
         '-i', '--include',
         type=str, nargs='*',
-        help="Only download files with these extensions. Ex: -i pdf mobi"
+        help="Only download files with these extensions. Ex: -i pdf mobi",
     )
 
     cli_args = parser.parse_args()
@@ -78,5 +85,6 @@ def cli():
             cli_args.library_path,
             progress_bar=cli_args.progress,
             ext_include=cli_args.include,
-            ext_exclude=cli_args.exclude
+            ext_exclude=cli_args.exclude,
+            platform_include=cli_args.platform,
         )

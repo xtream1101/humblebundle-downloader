@@ -18,11 +18,19 @@ def _clean_name(dirty_str):
 
 
 def download_library(cookie_path, library_path, progress_bar=False,
-                     ext_include=None, ext_exclude=None):
+                     ext_include=None, ext_exclude=None, platform_include=None):
     if ext_include is None:
         ext_include = []
+    ext_include = list(map(str.lower, ext_include))
+
     if ext_exclude is None:
         ext_exclude = []
+    ext_exclude = list(map(str.lower, ext_exclude))
+
+    if platform_include is None or 'all' in platform_include:
+        # if all then we do not even need to use this feature
+        platform_include = []
+    platform_include = list(map(str.lower, platform_include))
 
     # Load cookies
     with open(cookie_path, 'r') as f:
@@ -56,7 +64,13 @@ def download_library(cookie_path, library_path, progress_bar=False,
             # Get all types of download for a product
             for download_type in item['downloads']:
                 # Type of product, ebook, videos, etc...
-                # platform = download_type['platform']
+
+                platform = download_type['platform'].lower()
+                if (platform_include and platform not in platform_include):
+                    logger.info("Do not want " + platform
+                                + ", Skipping " + item_title)
+                    continue
+
                 item_folder = os.path.join(
                     library_path, bundle_title, item_title
                 )
@@ -70,14 +84,15 @@ def download_library(cookie_path, library_path, progress_bar=False,
                     try:
                         url = file_type['url']['web']
                     except KeyError:
-                        logger.info("No url found for " + item_title)
+                        logger.info("No url found for " + bundle_title
+                                    + "/" + item_title)
                         continue
 
                     ext = url.split('?')[0].split('.')[-1]
                     file_title = item_title + "." + ext
                     # Only get the file types we care about
-                    if ((ext_include and ext not in ext_include)
-                            or (ext_exclude and ext in ext_exclude)):
+                    if ((ext_include and ext.lower() not in ext_include)
+                            or (ext_exclude and ext.lower() in ext_exclude)):
                         logger.info("Skipping the file " + file_title)
                         continue
 

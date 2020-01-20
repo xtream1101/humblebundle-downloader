@@ -10,8 +10,11 @@ The first time this runs it may take a while because it will download everything
 ## Features
 - downloads new and updated content from your Humble Bundle Library on each run
 - cli command for easy use (downloading will also work on a headless system)
-- optional progress bar for each item downloaded _(using the `--progress` flag)_
+- works for SSO and 2FA accounts
+- optional progress bar for each item downloaded _(`--progress` flag)_
 - optional cookie generation script
+- optional filter by file types using an include _or_ exclude list _(`--include/--exclude` flag)_
+- optional filter by platform types like video, ebook, etc... _(`--platform` flag)_
 
 
 ## Install
@@ -47,3 +50,4 @@ This directory structure will be used:
 ## Notes
 * Inside your library folder a file named `.cache.json` is saved and keeps track of the files that have been downloaded. This way running the download command again pointing to the same directory will only download new or updated files.
 * Use `--help` with all `hbd` commands to see available options
+* Find supported platforms for the `--platform` flag by visiting your Humble Bundle Library and look under the **Platform** dropdown
