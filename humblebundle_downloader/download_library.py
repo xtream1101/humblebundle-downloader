@@ -8,9 +8,9 @@ logger = logging.getLogger(__name__)
 
 
 def _clean_name(dirty_str):
-    allowed_chars = (' ', '_', '.', '-', ':', '[', ']')
+    allowed_chars = (' ', '_', '.', '-', '[', ']')
     clean = []
-    for c in dirty_str.replace('+', '_'):
+    for c in dirty_str.replace('+', '_').replace(':', ' -'):
         if c.isalpha() or c.isdigit() or c in allowed_chars:
             clean.append(c)
 
@@ -61,7 +61,11 @@ def download_library(cookie_path, library_path, progress_bar=False):
 
                 # Download each file type of a product
                 for file_type in download_type['download_struct']:
-                    url = file_type['url']['web']
+                    try:
+                        url = file_type['url']['web']
+                    except KeyError:
+                        logger.info("No url found for " + item_title)
+                        continue
                     ext = url.split('?')[0].split('.')[-1]
                     file_title = item_title + "." + ext
                     filename = os.path.join(item_folder, file_title)
