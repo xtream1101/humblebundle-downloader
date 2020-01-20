@@ -53,6 +53,17 @@ def cli():
         action='store_true',
         help="Display progress bar for downloads",
     )
+    filter_ext = parser_download.add_mutually_exclusive_group()
+    filter_ext.add_argument(
+        '-e', '--exclude',
+        type=str, nargs='*',
+        help="File extensions to ignore when downloading files. Ex: -e pdf mobi"
+    )
+    filter_ext.add_argument(
+        '-i', '--include',
+        type=str, nargs='*',
+        help="Only download files with these extensions. Ex: -i pdf mobi"
+    )
 
     cli_args = parser.parse_args()
 
@@ -65,5 +76,7 @@ def cli():
         download_library(
             cli_args.cookie_file,
             cli_args.library_path,
-            progress_bar=cli_args.progress
+            progress_bar=cli_args.progress,
+            ext_include=cli_args.include,
+            ext_exclude=cli_args.exclude
         )

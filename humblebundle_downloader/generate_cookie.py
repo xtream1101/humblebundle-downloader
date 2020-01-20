@@ -26,7 +26,7 @@ def generate_cookie(cookie_path):
 
     driver.get('https://www.humblebundle.com/login')
 
-    while '/login' in driver.current_url:
+    while '/home/library' not in driver.current_url:
         # Waiting for the user to login
         time.sleep(.25)
 

@@ -17,7 +17,13 @@ def _clean_name(dirty_str):
     return "".join(clean).strip()
 
 
-def download_library(cookie_path, library_path, progress_bar=False):
+def download_library(cookie_path, library_path, progress_bar=False,
+                     ext_include=None, ext_exclude=None):
+    if ext_include is None:
+        ext_include = []
+    if ext_exclude is None:
+        ext_exclude = []
+
     # Load cookies
     with open(cookie_path, 'r') as f:
         account_cookies = f.read()
@@ -66,8 +72,15 @@ def download_library(cookie_path, library_path, progress_bar=False):
                     except KeyError:
                         logger.info("No url found for " + item_title)
                         continue
+
                     ext = url.split('?')[0].split('.')[-1]
                     file_title = item_title + "." + ext
+                    # Only get the file types we care about
+                    if ((ext_include and ext not in ext_include)
+                            or (ext_exclude and ext in ext_exclude)):
+                        logger.info("Skipping the file " + file_title)
+                        continue
+
                     filename = os.path.join(item_folder, file_title)
                     item_r = requests.get(url, stream=True)
                     logger.debug("Item request: {item_r}, Url: {url}"

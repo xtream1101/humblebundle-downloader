@@ -1,5 +1,9 @@
 # Change log
 
+### 0.0.8
+- gen-cookies now works with SSO feature and 2FA logins
+- Added `--include` & `--exclude` cli args to filter file types
+
 
 ### 0.0.7
 - Replace `:` with ` -` in filenames
