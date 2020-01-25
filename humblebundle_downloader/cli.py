@@ -85,8 +85,8 @@ def cli():
         generate_cookie(cli_args.cookie_file)
 
     elif cli_args.action == 'download':
-        from .download_library import download_library
-        download_library(
+        from .download_library import DownloadLibrary
+        DownloadLibrary(
             cli_args.cookie_file,
             cli_args.library_path,
             progress_bar=cli_args.progress,
@@ -94,4 +94,4 @@ def cli():
             ext_exclude=cli_args.exclude,
             platform_include=cli_args.platform,
             purchase_keys=cli_args.keys,
-        )
+        ).start()
