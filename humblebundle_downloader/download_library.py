@@ -110,7 +110,9 @@ class DownloadLibrary:
                         self._download_file(product_r, local_filename)
 
                     except (Exception, KeyboardInterrupt) as e:
-                        if self.progress_bar: print()
+                        if self.progress_bar:
+                            # Do not overwrite the progress bar on next print
+                            print()
                         logger.error("Failed to download file {product_title}/{url_filename}"  # noqa: E501
                                      .format(product_title=product_title,
                                              url_filename=url_filename))
@@ -125,7 +127,9 @@ class DownloadLibrary:
                             continue
 
                     else:
-                        if self.progress_bar: print()
+                        if self.progress_bar:
+                            # Do not overwrite the progress bar on next print
+                            print()
                         self._update_cache_data(cache_file_key, file_info)
 
                     finally:

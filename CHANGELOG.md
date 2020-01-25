@@ -1,6 +1,10 @@
 # Change log
 
 
+### 0.1.1
+- Delete failed downloaded files
+ 
+
 ### 0.1.0
 - Filename saved is now the original name of the file
 - key used in cache is different due to changing the file name (this may result in duplicate downloads if you have run the older version)
