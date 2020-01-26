@@ -1,6 +1,12 @@
 # Change log
 
 
+### 0.1.2
+- Stop using md5 & sha1 hashes to check if file is unique (was creating duplicate downloads of the same file)
+- Strip periods from end of directory & file names
+- Rename older versions of a file before download the new one
+
+
 ### 0.1.1
 - Delete failed downloaded files
  

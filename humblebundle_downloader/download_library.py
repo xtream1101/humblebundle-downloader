@@ -3,6 +3,7 @@ import sys
 import json
 import parsel
 import logging
+import datetime
 import requests
 
 logger = logging.getLogger(__name__)
@@ -15,7 +16,7 @@ def _clean_name(dirty_str):
         if c.isalpha() or c.isdigit() or c in allowed_chars:
             clean.append(c)
 
-    return "".join(clean).strip()
+    return "".join(clean).strip().rstrip('.')
 
 
 class DownloadLibrary:
@@ -99,14 +100,27 @@ class DownloadLibrary:
                              .format(product_r=product_r, url=url))
                 # Not sure which value will be best to use, so use them all
                 file_info = {
-                    'md5': file_type.get('md5'),
-                    'sha1': file_type.get('sha1'),
                     'url_last_modified': product_r.headers['Last-Modified'],
                     'url_etag': product_r.headers['ETag'][1:-1],
                     'url_crc': product_r.headers['X-HW-Cache-CRC'],
                 }
-                if file_info != self.cache_data.get(cache_file_key, {}):
+                cache_file_info = self.cache_data.get(cache_file_key, {})
+                if file_info != cache_file_info:
                     try:
+                        # Check if older file exists, if so rename
+                        if (os.path.isfile(local_filename) is True
+                                and 'url_last_modified' in cache_file_info):
+                            filename_parts = local_filename.rsplit('.', 1)
+                            last_modified = datetime.datetime.strptime(
+                                cache_file_info['url_last_modified'],
+                                '%a, %d %b %Y %H:%M:%S %Z'
+                            ).strftime('%Y-%m-%d')
+                            new_name = "{name}_{date}.{ext}"\
+                                       .format(name=filename_parts[0],
+                                               date=last_modified,
+                                               ext=filename_parts[1])
+                            os.rename(local_filename, new_name)
+
                         self._download_file(product_r, local_filename)
 
                     except (Exception, KeyboardInterrupt) as e:
@@ -178,6 +192,13 @@ class DownloadLibrary:
                 cache_data = json.load(f)
         except FileNotFoundError:
             cache_data = {}
+
+        # Remove md5 & sha1 keys from legacy cache data
+        for key, value in cache_data.items():
+            if 'md5' in value:
+                del cache_data[key]['md5']
+            if 'sha1' in value:
+                del cache_data[key]['sha1']
 
         return cache_data
 
