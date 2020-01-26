@@ -1,11 +1,16 @@
 # Change log
 
 
+### 0.2.0
+- Added **Humble Trove** support _(`--trove` to also check/download trove content)_
+- Now by default only new content is downloaded. Use `--update` to also check for updated content
+
+
 ### 0.1.3
 - Fixed re-downloading for real this time
   - Only use the url last modified time as the check for new versions
 
-  
+
 ### 0.1.2
 - Stop using md5 & sha1 hashes to check if file is unique (was creating duplicate downloads of the same file)
 - Strip periods from end of directory & file names

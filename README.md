@@ -8,7 +8,8 @@
 The first time this runs it may take a while because it will download everything. After that it will only download the content that has been updated or is missing.  
 
 ## Features
-- downloads new and updated content from your Humble Bundle Library on each run
+- support for Humble Trove _(`--trove` flag)_
+- downloads new and updated content from your Humble Bundle Library on each run _(only check for updates if using `--update`)_
 - cli command for easy use (downloading will also work on a headless system)
 - works for SSO and 2FA accounts
 - optional progress bar for each item downloaded _(`--progress` flag)_

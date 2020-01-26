@@ -9,6 +9,8 @@ logging.basicConfig(
     level=LOG_LEVEL,
     format='%(message)s',
 )
+# Ignore unwanted logs from the requests lib when debuging
+logging.getLogger('urllib3.connectionpool').setLevel(logging.WARNING)
 
 
 def cli():
@@ -32,8 +34,6 @@ def cli():
     ###
     # Download Library
     ###
-    # TODO: have option to only get types, ebooks, videos, etc do not enforce,
-    #       but lower and just string match to the type in the api
     parser_download = subparsers.add_parser(
         'download',
         help="Download content in your humble bundle library",
@@ -47,6 +47,15 @@ def cli():
         '-l', '--library-path', type=str,
         help="Folder to download all content to",
         required=True,
+    )
+    parser_download.add_argument(
+        '-t', '--trove', action='store_true',
+        help="Only check and download Humble Trove content",
+    )
+    parser_download.add_argument(
+        '-u', '--update', action='store_true',
+        help=("Check to see if products have been updated "
+              "(still get new products)"),
     )
     parser_download.add_argument(
         '-p', '--platform',
@@ -94,4 +103,6 @@ def cli():
             ext_exclude=cli_args.exclude,
             platform_include=cli_args.platform,
             purchase_keys=cli_args.keys,
+            trove=cli_args.trove,
+            update=cli_args.update,
         ).start()
