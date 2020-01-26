@@ -101,8 +101,6 @@ class DownloadLibrary:
                 # Not sure which value will be best to use, so use them all
                 file_info = {
                     'url_last_modified': product_r.headers['Last-Modified'],
-                    'url_etag': product_r.headers['ETag'][1:-1],
-                    'url_crc': product_r.headers['X-HW-Cache-CRC'],
                 }
                 cache_file_info = self.cache_data.get(cache_file_key, {})
                 if file_info != cache_file_info:
@@ -199,6 +197,10 @@ class DownloadLibrary:
                 del cache_data[key]['md5']
             if 'sha1' in value:
                 del cache_data[key]['sha1']
+            if 'url_etag' in value:
+                del cache_data[key]['url_etag']
+            if 'url_crc' in value:
+                del cache_data[key]['url_crc']
 
         return cache_data
 
