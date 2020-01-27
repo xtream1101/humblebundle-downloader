@@ -1,6 +1,10 @@
 # Change log
 
 
+### 0.2.1
+- Fixed include & exclude logic being switched in v0.2.0
+
+
 ### 0.2.0
 - Added **Humble Trove** support _(`--trove` to also check/download trove content)_
 - Now by default only new content is downloaded. Use `--update` to also check for updated content
