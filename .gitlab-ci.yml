@@ -1,4 +1,4 @@
-image: python:3
+image: python:3.7-alpine
 
 stages:
   - test
@@ -12,6 +12,12 @@ flake8:
   script:
     - pip install tox
     - tox -e flake8
+
+pytest:
+  stage: test
+  script:
+    - pip install tox
+    - tox -e py37
 
 pypi-package:
   stage: package

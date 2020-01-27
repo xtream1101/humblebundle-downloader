@@ -25,10 +25,7 @@ class DownloadLibrary:
     def __init__(self, cookie_path, library_path, progress_bar=False,
                  ext_include=None, ext_exclude=None, platform_include=None,
                  purchase_keys=None, trove=False, update=False):
-
-        with open(cookie_path, 'r') as f:
-            self.account_cookies = f.read().strip()
-
+        self.cookie_path = cookie_path
         self.library_path = library_path
         self.progress_bar = progress_bar
         self.ext_include = [] if ext_include is None else list(map(str.lower, ext_include))  # noqa: E501
@@ -40,19 +37,23 @@ class DownloadLibrary:
         self.platform_include = list(map(str.lower, platform_include))
 
         self.cache_file = os.path.join(library_path, '.cache.json')
+        self.purchase_keys = purchase_keys
+        self.trove = trove
+        self.update = update
+
+    def start(self):
+        with open(self.cookie_path, 'r') as f:
+            self.account_cookies = f.read().strip()
+
         self.cache_data = self._load_cache_data(self.cache_file)
+        self.purchase_keys = self.purchase_keys if self.purchase_keys else self._get_purchase_keys()  # noqa: E501
 
-        self.purchase_keys = purchase_keys if purchase_keys else self._get_purchase_keys()  # noqa: E501
-
-        if trove is True:
+        if self.trove is True:
             logger.info("Checking Humble Trove...")
             self.trove_products = self._get_trove_products()
         else:
             self.trove_products = []
 
-        self.update = update
-
-    def start(self):
         for product in self.trove_products:
             title = _clean_name(product['human-name'])
             self._process_trove_product(title, product)
@@ -329,5 +330,8 @@ class DownloadLibrary:
 
     def _should_download_file_type(self, ext):
         ext = ext.lower()
-        return ((self.ext_include and ext.lower() not in self.ext_include)
-                or (self.ext_exclude and ext.lower() in self.ext_exclude))
+        if self.ext_include != []:
+            return ext in self.ext_include
+        elif self.ext_exclude != []:
+            return ext not in self.ext_exclude
+        return True
