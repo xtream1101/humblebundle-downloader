@@ -63,14 +63,20 @@ class DownloadLibrary:
             self._process_order_id(order_id)
 
     def _get_trove_download_url(self, machine_name, web_name):
-        sign_r = requests.post(
-            'https://www.humblebundle.com/api/v1/user/download/sign',
-            data={
-                'machine_name': machine_name,
-                'filename': web_name,
-            },
-            headers={'cookie': self.account_cookies},
-        )
+        try:
+            sign_r = requests.post(
+                'https://www.humblebundle.com/api/v1/user/download/sign',
+                data={
+                    'machine_name': machine_name,
+                    'filename': web_name,
+                },
+                headers={'cookie': self.account_cookies},
+            )
+        except Exception:
+            logger.error("Failed to get download url for trove product {title}"
+                         .format(title=web_name))
+            return None
+
         logger.debug("Signed url response {sign_r}".format(sign_r=sign_r))
         signed_url = sign_r.json()['signed_url']
         logger.debug("Signed url {signed_url}".format(signed_url=signed_url))
@@ -110,7 +116,16 @@ class DownloadLibrary:
                     download['machine_name'],
                     web_name,
                 )
-                product_r = requests.get(signed_url, stream=True)
+                if signed_url is None:
+                    # Failed to get signed url. Error logged in fn
+                    continue
+
+                try:
+                    product_r = requests.get(signed_url, stream=True)
+                except Exception:
+                    logger.error("Failed to get trove product {title}"
+                                 .format(title=web_name))
+                    continue
 
                 if 'uploaded_at' in cache_file_info:
                     uploaded_at = time.strftime(
@@ -136,8 +151,13 @@ class DownloadLibrary:
             logger.debug("Collecting trove product data from api pg:{idx} ..."
                          .format(idx=idx))
             trove_page_url = trove_base_url.format(idx=idx)
-            trove_r = requests.get(trove_page_url,
-                                   headers={'cookie': self.account_cookies})
+            try:
+                trove_r = requests.get(trove_page_url,
+                                       headers={'cookie': self.account_cookies})
+            except Exception:
+                logger.error("Failed to get products from Humble Trove")
+                return []
+
             page_content = trove_r.json()
 
             if len(page_content) == 0:
@@ -150,11 +170,17 @@ class DownloadLibrary:
 
     def _process_order_id(self, order_id):
         order_url = 'https://www.humblebundle.com/api/v1/order/{order_id}?all_tpkds=true'.format(order_id=order_id)  # noqa: E501
-        order_r = requests.get(order_url,
-                               headers={'cookie': self.account_cookies,
-                                        'content-type': 'application/json',
-                                        'content-encoding': 'gzip',
-                                        })
+        try:
+            order_r = requests.get(order_url,
+                                   headers={'cookie': self.account_cookies,
+                                            'content-type': 'application/json',
+                                            'content-encoding': 'gzip',
+                                            })
+        except Exception:
+            logger.error("Failed to get order key {order_id}"
+                         .format(order_id=order_id))
+            return
+
         logger.debug("Order request: {order_r}".format(order_r=order_r))
         order = order_r.json()
         bundle_title = _clean_name(order['product']['human_name'])
@@ -216,7 +242,12 @@ class DownloadLibrary:
                     # Do not care about checking for updates at this time
                     continue
 
-                product_r = requests.get(url, stream=True)
+                try:
+                    product_r = requests.get(url, stream=True)
+                except Exception:
+                    logger.error("Failed to download {url}".format(url=url))
+                    continue
+
                 logger.debug("Item request: {product_r}, Url: {url}"
                              .format(product_r=product_r, url=url))
                 file_info = {
@@ -319,8 +350,13 @@ class DownloadLibrary:
         return cache_data
 
     def _get_purchase_keys(self):
-        library_r = requests.get('https://www.humblebundle.com/home/library',
-                                 headers={'cookie': self.account_cookies})
+        try:
+            library_r = requests.get('https://www.humblebundle.com/home/library',  # noqa: E501
+                                     headers={'cookie': self.account_cookies})
+        except Exception:
+            logger.error("Failed to get list of purchases")
+            return []
+
         logger.debug("Library request: " + str(library_r))
         library_page = parsel.Selector(text=library_r.text)
         orders_json = json.loads(library_page.css('#user-home-json-data')
