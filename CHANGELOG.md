@@ -1,5 +1,9 @@
 # Change log
 
+### 0.2.2
+- Confirm the download is complete by checking the expected size to what downloaded
+- Fixed the platform filter
+
 
 ### 0.2.1
 - Fixed include & exclude logic being switched in v0.2.0

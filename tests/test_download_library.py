@@ -1,6 +1,9 @@
 from humblebundle_downloader.download_library import DownloadLibrary
 
 
+###
+# _should_download_file_type
+###
 def test_include_logic_has_values():
     dl = DownloadLibrary(
         'fake_cookie_path',
@@ -47,3 +50,36 @@ def test_exclude_logic_empty():
     assert dl._should_download_file_type('df') is True
     assert dl._should_download_file_type('EPub') is True
     assert dl._should_download_file_type('mobi') is True
+
+
+###
+# _should_download_platform
+###
+def test_download_platform_filter_none():
+    dl = DownloadLibrary(
+        'fake_cookie_path',
+        'fake_library_path',
+        platform_include=None,
+    )
+    assert dl._should_download_platform('ebook') is True
+    assert dl._should_download_platform('audio') is True
+
+
+def test_download_platform_filter_blank():
+    dl = DownloadLibrary(
+        'fake_cookie_path',
+        'fake_library_path',
+        platform_include=[],
+    )
+    assert dl._should_download_platform('ebook') is True
+    assert dl._should_download_platform('audio') is True
+
+
+def test_download_platform_filter_audio():
+    dl = DownloadLibrary(
+        'fake_cookie_path',
+        'fake_library_path',
+        platform_include=['audio'],
+    )
+    assert dl._should_download_platform('ebook') is False
+    assert dl._should_download_platform('audio') is True

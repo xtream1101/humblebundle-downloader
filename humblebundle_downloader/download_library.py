@@ -306,6 +306,9 @@ class DownloadLibrary:
                                       space=' ' * (pb_width - done),
                                       ), end='\r')
 
+                if dl != total_length:
+                    raise ValueError("Download did not complete")
+
     def _load_cache_data(self, cache_file):
         try:
             with open(cache_file, 'r') as f:
@@ -326,7 +329,9 @@ class DownloadLibrary:
 
     def _should_download_platform(self, platform):
         platform = platform.lower()
-        return self.platform_include and platform not in self.platform_include
+        if self.platform_include and platform not in self.platform_include:
+            return False
+        return True
 
     def _should_download_file_type(self, ext):
         ext = ext.lower()
