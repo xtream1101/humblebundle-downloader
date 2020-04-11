@@ -25,6 +25,7 @@ setup(
             'hbd=humblebundle_downloader.cli:cli',
         ],
     },
+    python_requires='~=3.4',
     install_requires=[
         'requests',
         'parsel',
