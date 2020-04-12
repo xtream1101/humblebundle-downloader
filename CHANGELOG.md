@@ -1,5 +1,11 @@
 # Change log
 
+### WIP
+- pip install now requires python version 3.4+
+- `--trove` will only download trove products, nothing else
+- Filtering flags now work when downloading trove content
+
+
 ### 0.2.2
 - Confirm the download is complete by checking the expected size to what downloaded
 - Fixed the platform filter

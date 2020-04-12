@@ -49,18 +49,13 @@ class DownloadLibrary:
         self.purchase_keys = self.purchase_keys if self.purchase_keys else self._get_purchase_keys()  # noqa: E501
 
         if self.trove is True:
-            logger.info("Checking Humble Trove...")
-            self.trove_products = self._get_trove_products()
+            logger.info("Only checking the Humble Trove...")
+            for product in self._get_trove_products():
+                title = _clean_name(product['human-name'])
+                self._process_trove_product(title, product)
         else:
-            self.trove_products = []
-
-        for product in self.trove_products:
-            title = _clean_name(product['human-name'])
-            self._process_trove_product(title, product)
-
-        # Always check your purchases
-        for order_id in self.purchase_keys:
-            self._process_order_id(order_id)
+            for order_id in self.purchase_keys:
+                self._process_order_id(order_id)
 
     def _get_trove_download_url(self, machine_name, web_name):
         try:
@@ -78,17 +73,32 @@ class DownloadLibrary:
             return None
 
         logger.debug("Signed url response {sign_r}".format(sign_r=sign_r))
+        if sign_r.json().get('_errors') == 'Unauthorized':
+            logger.critical("Your account does not have access to the Trove")
+            sys.exit()
         signed_url = sign_r.json()['signed_url']
         logger.debug("Signed url {signed_url}".format(signed_url=signed_url))
         return signed_url
 
     def _process_trove_product(self, title, product):
-        for download in product['downloads'].values():
+        for platform, download in product['downloads'].items():
             # Sometimes the name has a dir in it
             # Example is "Broken Sword 5 - the Serpent's Curse"
             # Only the windows file has a dir like
             # "revolutionsoftware/BS5_v2.2.1-win32.zip"
+            if self._should_download_platform(platform) is False:  # noqa: E501
+                logger.info("Skipping {platform} for {product_title}"
+                            .format(platform=platform,
+                                    product_title=title))
+                continue
+
             web_name = download['url']['web'].split('/')[-1]
+            ext = web_name.split('.')[-1]
+            if self._should_download_file_type(ext) is False:
+                logger.info("Skipping the file {web_name}"
+                            .format(web_name=web_name))
+                continue
+
             cache_file_key = 'trove:{name}'.format(name=web_name)
             file_info = {
                 'uploaded_at': download.get('uploaded_at'),
