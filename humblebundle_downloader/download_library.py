@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 def _clean_name(dirty_str):
-    allowed_chars = (' ', '_', '.', '-', '[', ']', ',', '#', '&')
+    allowed_chars = (' ', '_', '.', '-', '+', '(', ')', '[', ']', '\'', ',', '#', '&')
     clean = []
-    for c in dirty_str.replace('+', '_').replace(':', ' -'):
+    for c in dirty_str.replace('/', '-').replace(' : ', ' - ').replace(': ', ' - ').replace(' :', ' - ').replace(':', '-').replace('*', '-').replace('"', '\'').replace('<', '(').replace('>', ')').replace('|', '-'):
         if c.isalpha() or c.isdigit() or c in allowed_chars:
             clean.append(c)
 
@@ -196,7 +196,7 @@ class DownloadLibrary:
 
         logger.debug("Order request: {order_r}".format(order_r=order_r))
         order = order_r.json()
-        bundle_title_parts = order['product']['human_name'].rsplit(': ',1)
+        bundle_title_parts = order['product']['human_name'].split(': ',1)
         bundle_title = _clean_name(bundle_title_parts[0])
         bundle_title_sub = _clean_name(bundle_title_parts[1]) if self.sub_title and (":" in order['product']['human_name']) else ""
         logger.info("Checking bundle: " + str(bundle_title))
