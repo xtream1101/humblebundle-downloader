@@ -86,7 +86,17 @@ def cli():
         help=("The purchase download key. Find in the url on the "
               "products/bundle download page. Can set multiple"),
     )
-
+    parser_download.add_argument(
+        '-f', '--human-filenames',
+        action='store_true',
+        help="Filenames are renamed to match product title",
+    )
+    parser_download.add_argument(
+        '-s', '--sub-bundle-title',
+        action='store_true',
+        help=("If bundle has a sub-title, create a directory base on subtitle."
+              "Ex: Humble Book Bundle: Read Books, /Humble Book Bundle/Read Books")
+    )
     cli_args = parser.parse_args()
 
     if cli_args.action == 'gen-cookies':
@@ -105,4 +115,6 @@ def cli():
             purchase_keys=cli_args.keys,
             trove=cli_args.trove,
             update=cli_args.update,
+            human_filenames=cli_args.human_filenames,
+            sub_title=cli_args.sub_bundle_title,
         ).start()
