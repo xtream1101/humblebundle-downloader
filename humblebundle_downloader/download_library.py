@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def _clean_name(dirty_str):
-    allowed_chars = (' ', '_', '.', '-', '[', ']')
+    allowed_chars = (' ', '_', '.', '-', '[', ']', ',', '#', '&')
     clean = []
     for c in dirty_str.replace('+', '_').replace(':', ' -'):
         if c.isalpha() or c.isdigit() or c in allowed_chars:
@@ -24,7 +24,8 @@ class DownloadLibrary:
 
     def __init__(self, cookie_path, library_path, progress_bar=False,
                  ext_include=None, ext_exclude=None, platform_include=None,
-                 purchase_keys=None, trove=False, update=False):
+                 purchase_keys=None, trove=False, update=False,
+                 human_filenames=False, sub_title=False):
         self.cookie_path = cookie_path
         self.library_path = library_path
         self.progress_bar = progress_bar
@@ -40,6 +41,8 @@ class DownloadLibrary:
         self.purchase_keys = purchase_keys
         self.trove = trove
         self.update = update
+        self.human_filenames = human_filenames
+        self.sub_title = sub_title
 
     def start(self):
         with open(self.cookie_path, 'r') as f:
@@ -193,10 +196,12 @@ class DownloadLibrary:
 
         logger.debug("Order request: {order_r}".format(order_r=order_r))
         order = order_r.json()
-        bundle_title = _clean_name(order['product']['human_name'])
+        bundle_title_parts = order['product']['human_name'].rsplit(': ',1)
+        bundle_title = _clean_name(bundle_title_parts[0])
+        bundle_title_sub = _clean_name(bundle_title_parts[1]) if self.sub_title and (":" in order['product']['human_name']) else ""
         logger.info("Checking bundle: " + str(bundle_title))
         for product in order['subproducts']:
-            self._process_product(order_id, bundle_title, product)
+            self._process_product(order_id, bundle_title, bundle_title_sub, product)
 
     def _rename_old_file(self, local_filename, append_str):
         # Check if older file exists, if so rename
@@ -210,7 +215,7 @@ class DownloadLibrary:
             logger.info("Renamed older file to {new_name}"
                         .format(new_name=new_name))
 
-    def _process_product(self, order_id, bundle_title, product):
+    def _process_product(self, order_id, bundle_title, bundle_title_sub, product):
         product_title = _clean_name(product['human_name'])
         # Get all types of download for a product
         for download_type in product['downloads']:
@@ -221,6 +226,8 @@ class DownloadLibrary:
                 continue
 
             product_folder = os.path.join(
+                self.library_path, bundle_title, bundle_title_sub, product_title
+            ) if bundle_title_sub else os.path.join(
                 self.library_path, bundle_title, product_title
             )
             # Create directory to save the files to
@@ -245,7 +252,9 @@ class DownloadLibrary:
                                 .format(url_filename=url_filename))
                     continue
 
-                local_filename = os.path.join(product_folder, url_filename)
+                local_filename = os.path.join(
+                        product_folder, (product_title + (" - Supplement" if "_supplement" in url_filename else "") + "." + ext) if self.human_filenames else url_filename
+                )
                 cache_file_info = self.cache_data.get(cache_file_key, {})
 
                 if cache_file_info != {} and self.update is not True:
