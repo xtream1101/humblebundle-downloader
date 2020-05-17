@@ -349,8 +349,7 @@ class DownloadLibrary:
                     done = int(pb_width * dl / total_length)
                     if self.progress_bar:
                         print("\t{percent}% [{filler}{space}]"
-                              .format(local_filename=local_filename,
-                                      percent=int(done * (100 / pb_width)),
+                              .format(percent=int(done * (100 / pb_width)),
                                       filler='=' * done,
                                       space=' ' * (pb_width - done),
                                       ), end='\r')
