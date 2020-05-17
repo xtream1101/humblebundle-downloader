@@ -1,6 +1,11 @@
 # Change log
 
-### WIP
+
+### 0.3.1
+- Added support for netscape cookies
+ 
+
+### 0.3.0
 - pip install now requires python version 3.4+
 - `--trove` will only download trove products, nothing else
 - Filtering flags now work when downloading trove content

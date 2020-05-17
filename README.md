@@ -13,7 +13,6 @@ The first time this runs it may take a while because it will download everything
 - cli command for easy use (downloading will also work on a headless system)
 - works for SSO and 2FA accounts
 - optional progress bar for each item downloaded _(`--progress` flag)_
-- optional cookie generation script
 - optional filter by file types using an include _or_ exclude list _(`--include/--exclude` flag)_
 - optional filter by platform types like video, ebook, etc... _(`--platform` flag)_
 
@@ -25,24 +24,13 @@ The first time this runs it may take a while because it will download everything
 ## Instructions
 
 ### 1. Getting cookies
-First thing to do is get your account cookies, they will be used later to download the files.  
-There are 2 ways to get your cookies: manual or scripted.  
-
-#### Method 1: Manual
-Use this method if you know how to get cookies from your browser after you are logged in.  
-Once you have your cookies, save them to a text file named `hbd-cookies.txt` in this format:  
-`hbflash=None;_fbp=fb.1.000000.000000;__ssid=XXXXXXXX;_gat=1;_gid=GA1.2.1111111.11111111;hbreqsec=True;_ga=GA1.2.1111111.111111;_simpleauth_sess=XXXXXXXXXXXXX;csrf_cookie=XXXXXXXXX`
-
-#### Method 2: Scripted
-**WARNING: This method may not work on all systems!**  
-Requires: Chrome and a desktop-like environment (not headless).  
-
-Run the command below to open a chrome window. After you login, the cookies will automatically be saved to a text file and the window will close.  
-`hbd gen-cookies --cookie-file hbd-cookies.txt`  
+First thing to do is get your account cookies. The cookies should be in the Netscape format. You can get them by using a browser extension. These are the ones that I tested, but others may work as well...  
+- Firefox: https://addons.mozilla.org/en-US/firefox/addon/export-cookies-txt/
+- Chrome: https://chrome.google.com/webstore/detail/cookiestxt/njabckikapfpffapmjgojcnbfjonfjfg/
 
 ### 2. Downloading your library
 Use the following command to download your Humble Bundle Library:  
-`hbd download --cookie-file hbd-cookies.txt --library-path "Downloaded Library" --progress`  
+`hbd download --cookie-file cookies.txt --library-path "Downloaded Library" --progress`  
 
 This directory structure will be used:  
 `Downloaded Library/Purchase Name/Item Name/downloaded_file.ext`

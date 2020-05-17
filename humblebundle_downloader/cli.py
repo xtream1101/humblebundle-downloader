@@ -19,19 +19,6 @@ def cli():
     subparsers.required = True
 
     ###
-    # Generate cookie
-    ###
-    parser_gencookie = subparsers.add_parser(
-        'gen-cookies',
-        help="Generate cookies used to access your library",
-    )
-    parser_gencookie.add_argument(
-        '-c', '--cookie-file', type=str,
-        help="Location of the file to store the cookie",
-        required=True,
-    )
-
-    ###
     # Download Library
     ###
     parser_download = subparsers.add_parser(
@@ -89,11 +76,8 @@ def cli():
 
     cli_args = parser.parse_args()
 
-    if cli_args.action == 'gen-cookies':
-        from .generate_cookie import generate_cookie
-        generate_cookie(cli_args.cookie_file)
-
-    elif cli_args.action == 'download':
+    if cli_args.action == 'download':
+        # Still keep the download action to keep compatibility
         from .download_library import DownloadLibrary
         DownloadLibrary(
             cli_args.cookie_file,
