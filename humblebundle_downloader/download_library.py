@@ -370,7 +370,7 @@ class DownloadLibrary:
         try:
             library_r = self.session.get('https://www.humblebundle.com/home/library')  # noqa: E501
         except Exception:
-            logger.error("Failed to get list of purchases")
+            logger.exception("Failed to get list of purchases")
             return []
 
         logger.debug("Library request: " + str(library_r))
