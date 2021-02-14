@@ -266,6 +266,15 @@ class DownloadLibrary:
                     logger.error("Failed to download {url}".format(url=url))
                     continue
 
+                # Check to see if the file still exists
+                if product_r.status_code != 200:
+                    logger.debug(
+                        "File missing for {bundle_title}/{product_title}: {url}"
+                        .format(bundle_title=bundle_title,
+                                product_title=product_title,
+                                url=url))
+                    continue
+
                 logger.debug("Item request: {product_r}, Url: {url}"
                              .format(product_r=product_r, url=url))
                 file_info = {
