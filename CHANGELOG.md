@@ -1,6 +1,12 @@
 # Change log
 
 
+### 0.3.3
+- Fixed crashing when file is missing on humblebundle
+- Updated cookie info in readme
+  - Supports passing in the cookie value of `_simpleauth_sess` by using `--session-auth`
+
+
 ### 0.3.1
 - Added support for netscape cookies
  
