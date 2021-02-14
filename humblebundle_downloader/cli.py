@@ -25,10 +25,14 @@ def cli():
         'download',
         help="Download content in your humble bundle library",
     )
-    parser_download.add_argument(
+    cookie = parser_download.add_mutually_exclusive_group(required=True)
+    cookie.add_argument(
         '-c', '--cookie-file', type=str,
         help="Location of the cookies file",
-        required=True,
+    )
+    cookie.add_argument(
+        '-s', '--session-auth', type=str,
+        help="Value of the cookie _simpleauth_sess. WRAP IN QUOTES",
     )
     parser_download.add_argument(
         '-l', '--library-path', type=str,
@@ -80,8 +84,9 @@ def cli():
         # Still keep the download action to keep compatibility
         from .download_library import DownloadLibrary
         DownloadLibrary(
-            cli_args.cookie_file,
             cli_args.library_path,
+            cookie_path=cli_args.cookie_file,
+            cookie_auth=cli_args.session_auth,
             progress_bar=cli_args.progress,
             ext_include=cli_args.include,
             ext_exclude=cli_args.exclude,

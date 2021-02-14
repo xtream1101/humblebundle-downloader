@@ -24,9 +24,15 @@ The first time this runs it may take a while because it will download everything
 ## Instructions
 
 ### 1. Getting cookies
-First thing to do is get your account cookies. The cookies should be in the Netscape format. You can get them by using a browser extension. These are the ones that I tested, but others may work as well...  
-- Firefox: https://addons.mozilla.org/en-US/firefox/addon/export-cookies-txt/
-- Chrome: https://chrome.google.com/webstore/detail/cookiestxt/njabckikapfpffapmjgojcnbfjonfjfg/
+First thing to do is get your account cookies. This can be done by getting a browser extension that lest you see or export your cookies.
+
+- **Method 1 (recommended)**
+    - Get the value of the cookie called `_simpleauth_sess` and pass that value using `-s "COOKIE_VALUE"`
+
+- **Method 2**
+    - Export the cookies in the Netscape format using an extension.  
+    If your exported cookie file is not working, it may be a formatting issue, this can be fixed by running the command `curl -b cookies.orig.txt --cookie-jar cookies.txt http://bogus`
+
 
 ### 2. Downloading your library
 Use the following command to download your Humble Bundle Library:  

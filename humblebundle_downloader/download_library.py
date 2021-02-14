@@ -23,9 +23,10 @@ def _clean_name(dirty_str):
 
 class DownloadLibrary:
 
-    def __init__(self, cookie_path, library_path, progress_bar=False,
-                 ext_include=None, ext_exclude=None, platform_include=None,
-                 purchase_keys=None, trove=False, update=False):
+    def __init__(self, library_path, cookie_path=None, cookie_auth=None,
+                 progress_bar=False, ext_include=None, ext_exclude=None,
+                 platform_include=None, purchase_keys=None, trove=False,
+                 update=False):
         self.library_path = library_path
         self.progress_bar = progress_bar
         self.ext_include = [] if ext_include is None else list(map(str.lower, ext_include))  # noqa: E501
@@ -42,14 +43,19 @@ class DownloadLibrary:
         self.update = update
 
         self.session = requests.Session()
-        try:
-            cookie_jar = http.cookiejar.MozillaCookieJar(cookie_path)
-            cookie_jar.load()
-            self.session.cookies = cookie_jar
-        except http.cookiejar.LoadError:
-            # Still support the original cookie method
-            with open(cookie_path, 'r') as f:
-                self.session.headers.update({'cookie': f.read().strip()})
+        if cookie_path:
+            try:
+                cookie_jar = http.cookiejar.MozillaCookieJar(cookie_path)
+                cookie_jar.load()
+                self.session.cookies = cookie_jar
+            except http.cookiejar.LoadError:
+                # Still support the original cookie method
+                with open(cookie_path, 'r') as f:
+                    self.session.headers.update({'cookie': f.read().strip()})
+        elif cookie_auth:
+            self.session.headers.update(
+                {'cookie': '_simpleauth_sess={}'.format(cookie_auth)}
+            )
 
     def start(self):
 
