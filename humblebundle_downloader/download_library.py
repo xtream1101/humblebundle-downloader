@@ -114,7 +114,9 @@ class DownloadLibrary:
 
             cache_file_key = 'trove:{name}'.format(name=web_name)
             file_info = {
-                'uploaded_at': download.get('uploaded_at') or download.get('timestamp') or product.get('date_added', '0'),
+                'uploaded_at': (download.get('uploaded_at')
+                                or download.get('timestamp')
+                                or product.get('date_added', '0')),
                 'md5': download.get('md5', 'UNKNOWN_MD5'),
             }
             cache_file_info = self.cache_data.get(cache_file_key, {})
