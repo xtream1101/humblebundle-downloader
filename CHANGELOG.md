@@ -1,5 +1,8 @@
 # Change log
 
+### 0.3.4
+- Merged in [PR 35](https://github.com/xtream1101/humblebundle-downloader/pull/35) to fix some trove games not downloading
+
 
 ### 0.3.3
 - Fixed crashing when file is missing on humblebundle
