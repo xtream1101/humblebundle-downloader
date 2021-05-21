@@ -29,8 +29,6 @@ setup(
     install_requires=[
         'requests',
         'parsel',
-        'selenium',
-        'webdriverdownloader',
     ],
 
 )
