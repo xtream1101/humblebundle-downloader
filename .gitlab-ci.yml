@@ -40,7 +40,7 @@ pypi-package:
 tag:
   stage: release
   only:
-    - master
+    - main
   script:
     - *write_permission
     - export VERSION=$(echo $(python -c "import humblebundle_downloader._version as v; print(v.__version__)"))

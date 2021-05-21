@@ -1,5 +1,10 @@
 # Change log
 
+
+### 0.4.0
+- Deprecate the `download` argument. It is no longer needed since that is the only action that can be taken
+
+
 ### 0.3.4
 - Merged in [PR 35](https://github.com/xtream1101/humblebundle-downloader/pull/35) to fix some trove games not downloading
 
