@@ -6,7 +6,6 @@ from humblebundle_downloader.download_library import DownloadLibrary
 ###
 def test_include_logic_has_values():
     dl = DownloadLibrary(
-        'fake_cookie_path',
         'fake_library_path',
         ext_include=['pdf', 'EPub'],
     )
@@ -18,7 +17,6 @@ def test_include_logic_has_values():
 
 def test_include_logic_empty():
     dl = DownloadLibrary(
-        'fake_cookie_path',
         'fake_library_path',
         ext_include=[],
     )
@@ -30,7 +28,6 @@ def test_include_logic_empty():
 
 def test_exclude_logic_has_values():
     dl = DownloadLibrary(
-        'fake_cookie_path',
         'fake_library_path',
         ext_exclude=['pdf', 'EPub'],
     )
@@ -42,7 +39,6 @@ def test_exclude_logic_has_values():
 
 def test_exclude_logic_empty():
     dl = DownloadLibrary(
-        'fake_cookie_path',
         'fake_library_path',
         ext_exclude=[],
     )
@@ -57,7 +53,6 @@ def test_exclude_logic_empty():
 ###
 def test_download_platform_filter_none():
     dl = DownloadLibrary(
-        'fake_cookie_path',
         'fake_library_path',
         platform_include=None,
     )
@@ -67,7 +62,6 @@ def test_download_platform_filter_none():
 
 def test_download_platform_filter_blank():
     dl = DownloadLibrary(
-        'fake_cookie_path',
         'fake_library_path',
         platform_include=[],
     )
@@ -77,7 +71,6 @@ def test_download_platform_filter_blank():
 
 def test_download_platform_filter_audio():
     dl = DownloadLibrary(
-        'fake_cookie_path',
         'fake_library_path',
         platform_include=['audio'],
     )

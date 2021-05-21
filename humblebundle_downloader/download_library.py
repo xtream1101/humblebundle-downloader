@@ -37,7 +37,6 @@ class DownloadLibrary:
             platform_include = []
         self.platform_include = list(map(str.lower, platform_include))
 
-        self.cache_file = os.path.join(library_path, '.cache.json')
         self.purchase_keys = purchase_keys
         self.trove = trove
         self.update = update
@@ -59,6 +58,7 @@ class DownloadLibrary:
 
     def start(self):
 
+        self.cache_file = os.path.join(self.library_path, '.cache.json')
         self.cache_data = self._load_cache_data(self.cache_file)
         self.purchase_keys = self.purchase_keys if self.purchase_keys else self._get_purchase_keys()  # noqa: E501
 
