@@ -7,6 +7,7 @@ import logging
 import datetime
 import requests
 import http.cookiejar
+import hashlib
 
 logger = logging.getLogger(__name__)
 
@@ -287,6 +288,8 @@ class DownloadLibrary:
                              .format(product_r=product_r, url=url))
                 file_info = {
                     'url_last_modified': product_r.headers['Last-Modified'],
+                    'web_md5': file_type['md5'],
+                    'local_filename_rel': os.path.relpath(local_filename,self.library_path),
                 }
                 if file_info['url_last_modified'] != cache_file_info.get('url_last_modified'):  # noqa: E501
                     if 'url_last_modified' in cache_file_info:
@@ -322,7 +325,7 @@ class DownloadLibrary:
             if rename_str:
                 self._rename_old_file(local_filename, rename_str)
 
-            self._download_file(open_r, local_filename)
+            self._download_file(open_r, local_filename, file_info)
 
         except (Exception, KeyboardInterrupt) as e:
             if self.progress_bar:
@@ -342,13 +345,16 @@ class DownloadLibrary:
             if self.progress_bar:
                 # Do not overwrite the progress bar on next print
                 print()
+            if ( file_info['web_md5'] != file_info['file_md5'] ):
+                logger.warning("WARNING: Downloaded md5 mismatch in file {local_filename}\n    Web  md5:{web_md5}\n    File md5:{file_md5}"
+                               .format(local_filename=local_filename,web_md5=file_info['web_md5'],file_md5=file_info['file_md5']))
             self._update_cache_data(cache_file_key, file_info)
 
         finally:
             # Since its a stream connection, make sure to close it
             open_r.connection.close()
 
-    def _download_file(self, product_r, local_filename):
+    def _download_file(self, product_r, local_filename, file_info):
         logger.info("Downloading: {local_filename}"
                     .format(local_filename=local_filename))
 
@@ -358,10 +364,12 @@ class DownloadLibrary:
                 outfile.write(product_r.content)
             else:
                 dl = 0
+                md5_hash = hashlib.md5()
                 total_length = int(total_length)
                 for data in product_r.iter_content(chunk_size=4096):
                     dl += len(data)
                     outfile.write(data)
+                    md5_hash.update(data)
                     pb_width = 50
                     done = int(pb_width * dl / total_length)
                     if self.progress_bar:
@@ -373,6 +381,7 @@ class DownloadLibrary:
 
                 if dl != total_length:
                     raise ValueError("Download did not complete")
+                file_info['file_md5'] = md5_hash.hexdigest()
 
     def _load_cache_data(self, cache_file):
         try:
