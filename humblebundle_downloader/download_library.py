@@ -493,9 +493,6 @@ class DownloadLibrary:
                                              .format(local_filename=local_filename,file_md5=cache_file_info['file_md5'],current_md5=md5_hash.hexdigest()))
                                 #continue on error so we won't mark the file as verified.
                                 continue
-                            else:
-                                logger.info("Downloaded md5 matches in file {local_filename}\n    Saved   File md5:{file_md5}\n    Current File md5:{current_md5}"
-                                             .format(local_filename=local_filename,file_md5=cache_file_info['file_md5'],current_md5=md5_hash.hexdigest()))
                         else:
                             #If md5 not stored when downloaded, store calculated md5 as the file md5.
                             logger.info("Created initial file md5 for file {local_filename}"
