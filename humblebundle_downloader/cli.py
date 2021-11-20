@@ -15,7 +15,7 @@ logging.getLogger('urllib3.connectionpool').setLevel(logging.WARNING)
 
 
 def parse_args(args):
-    if args[0].lower() == 'download':
+    if len(args) > 0 and args[0].lower() == 'download':
         args = args[1:]
         raise DeprecationWarning("`download` argument is no longer used")
 
