@@ -27,7 +27,7 @@ The first time this runs it may take a while because it will download everything
 First thing to do is get your account cookies. This can be done by getting a browser extension that lets you see or export your cookies.
 
 - **Method 1 (recommended)**
-    - Get the value of the cookie called `_simpleauth_sess` and pass that value using `-s "COOKIE_VALUE"`
+    - Get the `value` of the cookie called `_simpleauth_sess` and pass that value using `-s "COOKIE_VALUE"`. It should be a string of 144 characters. 
 
 - **Method 2**
     - Export the cookies in the Netscape format using an extension.  
