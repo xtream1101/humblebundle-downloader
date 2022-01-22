@@ -26,7 +26,7 @@ class DownloadLibrary:
     def __init__(self, library_path, cookie_path=None, cookie_auth=None,
                  progress_bar=False, ext_include=None, ext_exclude=None,
                  platform_include=None, purchase_keys=None, trove=False,
-                 update=False):
+                 update=False, content_types=None):
         self.library_path = library_path
         self.progress_bar = progress_bar
         self.ext_include = [] if ext_include is None else list(map(str.lower, ext_include))  # noqa: E501
@@ -40,6 +40,7 @@ class DownloadLibrary:
         self.purchase_keys = purchase_keys
         self.trove = trove
         self.update = update
+        self.content_types = ['web'] if content_types is None else list(map(str.lower, content_types))  # noqa: E501
 
         self.session = requests.Session()
         if cookie_path:
@@ -245,64 +246,65 @@ class DownloadLibrary:
 
             # Download each file type of a product
             for file_type in download_type['download_struct']:
-                try:
-                    url = file_type['url']['web']
-                except KeyError:
-                    logger.info("No url found: {bundle_title}/{product_title}"
-                                .format(bundle_title=bundle_title,
-                                        product_title=product_title))
-                    continue
+                for content_type in self.content_types:
+                    try:
+                        url = file_type['url'][content_type]
+                    except KeyError:
+                        logger.info("No url found: {bundle_title}/{product_title}"
+                                    .format(bundle_title=bundle_title,
+                                            product_title=product_title))
+                        continue
 
-                url_filename = url.split('?')[0].split('/')[-1]
-                cache_file_key = order_id + ':' + url_filename
-                ext = url_filename.split('.')[-1]
-                if self._should_download_file_type(ext) is False:
-                    logger.info("Skipping the file {url_filename}"
-                                .format(url_filename=url_filename))
-                    continue
+                    url_filename = url.split('?')[0].split('/')[-1]
+                    cache_file_key = order_id + ':' + url_filename
+                    ext = url_filename.split('.')[-1]
+                    if self._should_download_file_type(ext) is False:
+                        logger.info("Skipping the file {url_filename}"
+                                    .format(url_filename=url_filename))
+                        continue
 
-                local_filename = os.path.join(product_folder, url_filename)
-                cache_file_info = self.cache_data.get(cache_file_key, {})
+                    local_filename = os.path.join(product_folder, url_filename)
+                    cache_file_info = self.cache_data.get(cache_file_key, {})
 
-                if cache_file_info != {} and self.update is not True:
-                    # Do not care about checking for updates at this time
-                    continue
+                    if cache_file_info != {} and self.update is not True:
+                        # Do not care about checking for updates at this time
+                        continue
 
-                try:
-                    product_r = self.session.get(url, stream=True)
-                except Exception:
-                    logger.error("Failed to download {url}".format(url=url))
-                    continue
+                    try:
+                        product_r = self.session.get(url, stream=True)
+                    except Exception:
+                        logger.error("Failed to download {url}".format(url=url))
+                        continue
 
-                # Check to see if the file still exists
-                if product_r.status_code != 200:
-                    logger.debug(
-                        "File missing for {bundle_title}/{product_title}: {url}"
-                        .format(bundle_title=bundle_title,
-                                product_title=product_title,
-                                url=url))
-                    continue
+                    # Check to see if the file still exists
+                    if product_r.status_code != 200:
+                        logger.debug(
+                            "File missing for {bundle_title}/{product_title}: {url}"
+                            .format(bundle_title=bundle_title,
+                                    product_title=product_title,
+                                    url=url))
+                        continue
 
-                logger.debug("Item request: {product_r}, Url: {url}"
-                             .format(product_r=product_r, url=url))
-                file_info = {
-                    'url_last_modified': product_r.headers['Last-Modified'],
-                }
-                if file_info['url_last_modified'] != cache_file_info.get('url_last_modified'):  # noqa: E501
-                    if 'url_last_modified' in cache_file_info:
-                        last_modified = datetime.datetime.strptime(
-                            cache_file_info['url_last_modified'],
-                            '%a, %d %b %Y %H:%M:%S %Z'
-                        ).strftime('%Y-%m-%d')
-                    else:
-                        last_modified = None
-                    self._process_download(
-                        product_r,
-                        cache_file_key,
-                        file_info,
-                        local_filename,
-                        rename_str=last_modified,
-                    )
+                    logger.debug("Item request: {product_r}, Url: {url}"
+                                .format(product_r=product_r, url=url))
+                    file_info = {
+                        'url_last_modified': product_r.headers['Last-Modified'],
+                    }
+                    if file_info['url_last_modified'] != cache_file_info.get('url_last_modified'):  # noqa: E501
+                        if 'url_last_modified' in cache_file_info:
+                            last_modified = datetime.datetime.strptime(
+                                cache_file_info['url_last_modified'],
+                                '%a, %d %b %Y %H:%M:%S %Z'
+                            ).strftime('%Y-%m-%d')
+                        else:
+                            last_modified = None
+                        self._process_download(
+                            product_r,
+                            cache_file_key,
+                            file_info,
+                            local_filename,
+                            rename_str=last_modified,
+                        )
 
     def _update_cache_data(self, cache_file_key, file_info):
         self.cache_data[cache_file_key] = file_info
