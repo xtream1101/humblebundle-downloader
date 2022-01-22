@@ -51,6 +51,13 @@ def parse_args(args):
               "humble bundle's library dropdown. Ex: -p ebook video"),
     )
     parser.add_argument(
+        '--content-types',
+        type=str, nargs='*',
+        help="Whether to download only direct content (web) and/or the bittorrent file. Default is only direct content. "
+        "Available variables: 'web', 'bittorrent' "
+        "Ex: --content-types web bittorrent ",
+    )
+    parser.add_argument(
         '--progress',
         action='store_true',
         help="Display progress bar for downloads",
@@ -92,4 +99,5 @@ def cli():
         purchase_keys=cli_args.keys,
         trove=cli_args.trove,
         update=cli_args.update,
+        content_types=cli_args.content_types
     ).start()
