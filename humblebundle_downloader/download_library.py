@@ -171,7 +171,7 @@ class DownloadLibrary:
     def _get_trove_products(self):
         trove_products = []
         idx = 0
-        trove_base_url = 'https://www.humblebundle.com/api/v1/trove/chunk?property=popularity&direction=desc&index={idx}'   # noqa: E501
+        trove_base_url = 'https://www.humblebundle.com/client/catalog?index={idx}'   # noqa: E501
         while True:
             logger.debug("Collecting trove product data from api pg:{idx} ..."
                          .format(idx=idx))
