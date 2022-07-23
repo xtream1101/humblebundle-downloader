@@ -25,12 +25,23 @@ class DownloadLibrary:
 
     def __init__(self, library_path, cookie_path=None, cookie_auth=None,
                  progress_bar=False, ext_include=None, ext_exclude=None,
+                 write_buffer=1, chunk_size=4096, timeout=0,
                  platform_include=None, purchase_keys=None, trove=False,
+                 keep=False, debug=False, 
                  update=False):
         self.library_path = library_path
         self.progress_bar = progress_bar
         self.ext_include = [] if ext_include is None else list(map(str.lower, ext_include))  # noqa: E501
         self.ext_exclude = [] if ext_exclude is None else list(map(str.lower, ext_exclude))  # noqa: E501
+        self.write_buffer = write_buffer
+        self.chunk_size = chunk_size
+        self.timeout=timeout
+        self.debug=debug    # debug flag will raise exceptions so the program can stop for debugging purposes
+        self.keep=keep      # keep files on exception?  Default is to os.remove file on exception
+
+        # these variables are used for the enhanced progress bar
+        self.total_downloaded = 0   
+        self.start_time = datetime.datetime.now()
 
         if platform_include is None or 'all' in platform_include:
             # if 'all', then do not need to use this check
@@ -146,7 +157,7 @@ class DownloadLibrary:
                     continue
 
                 try:
-                    product_r = self.session.get(signed_url, stream=True)
+                    product_r = self.session.get(signed_url, stream=True, timeout=self.timeout)
                 except Exception:
                     logger.error("Failed to get trove product {title}"
                                  .format(title=web_name))
@@ -177,7 +188,7 @@ class DownloadLibrary:
                          .format(idx=idx))
             trove_page_url = trove_base_url.format(idx=idx)
             try:
-                trove_r = self.session.get(trove_page_url)
+                trove_r = self.session.get(trove_page_url, timeout=self.timeout)
             except Exception:
                 logger.error("Failed to get products from Humble Trove")
                 return []
@@ -201,6 +212,7 @@ class DownloadLibrary:
                     'content-type': 'application/json',
                     'content-encoding': 'gzip',
                 },
+                timeout=self.timeout,
             )
         except Exception:
             logger.error("Failed to get order key {order_id}"
@@ -269,7 +281,7 @@ class DownloadLibrary:
                     continue
 
                 try:
-                    product_r = self.session.get(url, stream=True)
+                    product_r = self.session.get(url, stream=True, timeout=self.timeout)
                 except Exception:
                     logger.error("Failed to download {url}".format(url=url))
                     continue
@@ -331,9 +343,13 @@ class DownloadLibrary:
             logger.error("Failed to download file {local_filename}"
                          .format(local_filename=local_filename))
 
-            # Clean up broken downloaded file
-            try: os.remove(local_filename)  # noqa: E701
-            except OSError: pass  # noqa: E701
+            if self.debug:
+                raise
+
+            if not self.keep:
+                # Clean up broken downloaded file
+                try: os.remove(local_filename)  # noqa: E701
+                except OSError: pass  # noqa: E701
 
             if type(e).__name__ == 'KeyboardInterrupt':
                 sys.exit()
@@ -348,31 +364,68 @@ class DownloadLibrary:
             # Since its a stream connection, make sure to close it
             open_r.connection.close()
 
+    """
+    This function will return a human-readable filesize-string
+    like "3.5 MB" for it's given 'num' parameter.
+    From http://stackoverflow.com/questions/1094841
+    """
+    def _convert_size(self, num):
+        for units in ['B','KB','MB','GB','TB', 'PB', 'EB', 'ZB', 'YB']:
+            if num < 1024.0:
+                return "%6.2f %s" % (num, units)
+            num /= 1024.0        
+        return "%6.2f %s" % (num, units)
+    
     def _download_file(self, product_r, local_filename):
         logger.info("Downloading: {local_filename}"
                     .format(local_filename=local_filename))
 
-        with open(local_filename, 'wb') as outfile:
+        # progress bar width
+        pb_width = 40
+
+        # format strings for the progress bar
+        FILE_PROGRESS_FORMAT='\t{fspeed}/s\t{percent:3}% [{filler}{space}]'
+        FILE_FINISH_FORMAT=FILE_PROGRESS_FORMAT+'  {tspeed}/s {downloaded:,}b/{seconds:.3f}s'
+
+        # download start time
+        dl_start=datetime.datetime.now()
+
+        with open(local_filename, 'wb', buffering=self.write_buffer) as outfile:
             total_length = product_r.headers.get('content-length')
             if total_length is None:  # no content length header
                 outfile.write(product_r.content)
+                self.total_downloaded += len(product_r.content)
             else:
+                # bytes downloaded
                 dl = 0
                 total_length = int(total_length)
-                for data in product_r.iter_content(chunk_size=4096):
+                for data in product_r.iter_content(chunk_size=self.chunk_size):
                     dl += len(data)
                     outfile.write(data)
-                    pb_width = 50
                     done = int(pb_width * dl / total_length)
                     if self.progress_bar:
-                        print("\t{percent}% [{filler}{space}]"
+                        dl_time=datetime.datetime.now()-dl_start
+                        print(FILE_PROGRESS_FORMAT
                               .format(percent=int(done * (100 / pb_width)),
                                       filler='=' * done,
                                       space=' ' * (pb_width - done),
+                                      fspeed=self._convert_size(int(dl/dl_time.total_seconds())),
                                       ), end='\r')
 
                 if dl != total_length:
                     raise ValueError("Download did not complete")
+                self.total_downloaded += dl
+        if self.progress_bar:
+            run_time=datetime.datetime.now()-self.start_time
+            print(FILE_FINISH_FORMAT
+                .format(tspeed=self._convert_size(int(self.total_downloaded/run_time.total_seconds())),
+                    fspeed=self._convert_size(int(dl/dl_time.total_seconds())),
+                    downloaded=self.total_downloaded,
+                    seconds=run_time.total_seconds(),
+                    percent=int(done * (100 / pb_width)),
+                    filler='=' * done,
+                    space=' ' * (pb_width - done),                    
+                    ), end='\r')
 
     def _load_cache_data(self, cache_file):
         try:
@@ -385,7 +438,7 @@ class DownloadLibrary:
 
     def _get_purchase_keys(self):
         try:
-            library_r = self.session.get('https://www.humblebundle.com/home/library')  # noqa: E501
+            library_r = self.session.get('https://www.humblebundle.com/home/library', timeout=self.timeout)  # noqa: E501
         except Exception:
             logger.exception("Failed to get list of purchases")
             return []
