@@ -72,6 +72,7 @@ class DownloadLibrary:
         else:
             exorcist_pool_party = ExorcistPool()
             exorcist_pool_party.map(self._process_order_id, self.purchase_keys)
+            exorcist_pool_party.join()
 
     def _get_trove_download_url(self, machine_name, web_name):
         try:
@@ -328,7 +329,7 @@ class DownloadLibrary:
                 # Do not overwrite the progress bar on next print
                 print()
             logger.error("Failed to download file {local_filename}"
-                         .format(local_filename=local_filename))
+                         .format(local_filename=os.path.basename(local_filename)))
 
             # Clean up broken downloaded file
             try: os.remove(local_filename)  # noqa: E701
