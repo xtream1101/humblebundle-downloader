@@ -7,6 +7,8 @@ import logging
 import datetime
 import requests
 import http.cookiejar
+from multiprocess.exorcise_daemons import ExorcistPool
+from exceptions.InvalidCookieException import InvalidCookieException
 
 logger = logging.getLogger(__name__)
 
@@ -29,13 +31,13 @@ class DownloadLibrary:
                  update=False):
         self.library_path = library_path
         self.progress_bar = progress_bar
-        self.ext_include = [] if ext_include is None else list(map(str.lower, ext_include))  # noqa: E501
-        self.ext_exclude = [] if ext_exclude is None else list(map(str.lower, ext_exclude))  # noqa: E501
+        self.ext_include = [] if ext_include is None else list(map(lambda s: str(s).lower, ext_include))  # noqa: E501
+        self.ext_exclude = [] if ext_exclude is None else list(map(lambda s: str(s).lower, ext_exclude))  # noqa: E501
 
         if platform_include is None or 'all' in platform_include:
             # if 'all', then do not need to use this check
             platform_include = []
-        self.platform_include = list(map(str.lower, platform_include))
+        self.platform_include = list(map(lambda s: str(s).lower, platform_include))
 
         self.purchase_keys = purchase_keys
         self.trove = trove
@@ -53,7 +55,7 @@ class DownloadLibrary:
                     self.session.headers.update({'cookie': f.read().strip()})
         elif cookie_auth:
             self.session.headers.update(
-                {'cookie': '_simpleauth_sess={}'.format(cookie_auth)}
+                {'cookie': f'_simpleauth_sess={cookie_auth}'}
             )
 
     def start(self):
@@ -68,8 +70,8 @@ class DownloadLibrary:
                 title = _clean_name(product['human-name'])
                 self._process_trove_product(title, product)
         else:
-            for order_id in self.purchase_keys:
-                self._process_order_id(order_id)
+            exorcist_pool_party = ExorcistPool()
+            exorcist_pool_party.map(self._process_order_id, self.purchase_keys)
 
     def _get_trove_download_url(self, machine_name, web_name):
         try:
@@ -85,12 +87,12 @@ class DownloadLibrary:
                          .format(title=web_name))
             return None
 
-        logger.debug("Signed url response {sign_r}".format(sign_r=sign_r))
+        logger.debug(f"Signed url response {sign_r}")
         if sign_r.json().get('_errors') == 'Unauthorized':
             logger.critical("Your account does not have access to the Trove")
             sys.exit()
         signed_url = sign_r.json()['signed_url']
-        logger.debug("Signed url {signed_url}".format(signed_url=signed_url))
+        logger.debug(f"Signed url {signed_url}")
         return signed_url
 
     def _process_trove_product(self, title, product):
@@ -100,9 +102,7 @@ class DownloadLibrary:
             # Only the windows file has a dir like
             # "revolutionsoftware/BS5_v2.2.1-win32.zip"
             if self._should_download_platform(platform) is False:  # noqa: E501
-                logger.info("Skipping {platform} for {product_title}"
-                            .format(platform=platform,
-                                    product_title=title))
+                logger.info(f"Skipping {platform} for {title}")
                 continue
 
             web_name = download['url']['web'].split('/')[-1]
@@ -134,7 +134,7 @@ class DownloadLibrary:
                 try: os.makedirs(product_folder)  # noqa: E701
                 except OSError: pass  # noqa: E701
                 local_filename = os.path.join(
-                    product_folder,
+                    str(product_folder),
                     web_name,
                 )
                 signed_url = self._get_trove_download_url(
@@ -148,8 +148,7 @@ class DownloadLibrary:
                 try:
                     product_r = self.session.get(signed_url, stream=True)
                 except Exception:
-                    logger.error("Failed to get trove product {title}"
-                                 .format(title=web_name))
+                    logger.error(f"Failed to get trove product {web_name}")
                     continue
 
                 if 'uploaded_at' in cache_file_info:
@@ -365,7 +364,7 @@ class DownloadLibrary:
                     pb_width = 50
                     done = int(pb_width * dl / total_length)
                     if self.progress_bar:
-                        print("\t{percent}% [{filler}{space}]"
+                        print("\t{percent}% [{filler}{space}]"  # this is nice.
                               .format(percent=int(done * (100 / pb_width)),
                                       filler='=' * done,
                                       space=' ' * (pb_width - done),
@@ -394,7 +393,7 @@ class DownloadLibrary:
         library_page = parsel.Selector(text=library_r.text)
         user_data = library_page.css('#user-home-json-data').xpath('string()').extract_first()  # noqa: E501
         if user_data is None:
-            raise Exception("Unable to download user-data, cookies missing?")
+            raise InvalidCookieException()
         orders_json = json.loads(user_data)
         return orders_json['gamekeys']
 
@@ -406,8 +405,8 @@ class DownloadLibrary:
 
     def _should_download_file_type(self, ext):
         ext = ext.lower()
-        if self.ext_include != []:
+        if self.ext_include:
             return ext in self.ext_include
-        elif self.ext_exclude != []:
+        elif self.ext_exclude:
             return ext not in self.ext_exclude
         return True
