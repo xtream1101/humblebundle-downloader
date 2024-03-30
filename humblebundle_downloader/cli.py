@@ -80,7 +80,7 @@ def parse_args(args):
 def cli():
     cli_args = parse_args(sys.argv[1:])
 
-    from humblebundle_downloader import DownloadLibrary
+    from download_library import DownloadLibrary
     DownloadLibrary(
         cli_args.library_path,
         cookie_path=cli_args.cookie_file,

@@ -1,7 +1,10 @@
+import multiprocessing
 import os
 import sys
 import json
 import time
+from typing import Any
+
 import parsel
 import logging
 import datetime
@@ -9,8 +12,10 @@ import requests
 import http.cookiejar
 from multiprocess.exorcise_daemons import ExorcistPool
 from exceptions.InvalidCookieException import InvalidCookieException
+from cache import CacheData
 
 logger = logging.getLogger(__name__)
+
 
 
 def _clean_name(dirty_str):
@@ -31,8 +36,8 @@ class DownloadLibrary:
                  update=False):
         self.library_path = library_path
         self.progress_bar = progress_bar
-        self.ext_include = [] if ext_include is None else list(map(lambda s: str(s).lower, ext_include))  # noqa: E501
-        self.ext_exclude = [] if ext_exclude is None else list(map(lambda s: str(s).lower, ext_exclude))  # noqa: E501
+        self.ext_include = [] if ext_include is None else list(map(str.lower, ext_include))  # noqa: E501
+        self.ext_exclude = [] if ext_exclude is None else list(map(str.lower, ext_exclude))  # noqa: E501
 
         if platform_include is None or 'all' in platform_include:
             # if 'all', then do not need to use this check
@@ -70,9 +75,34 @@ class DownloadLibrary:
                 title = _clean_name(product['human-name'])
                 self._process_trove_product(title, product)
         else:
-            exorcist_pool_party = ExorcistPool()
-            exorcist_pool_party.map(self._process_order_id, self.purchase_keys)
-            exorcist_pool_party.join()
+            manager = multiprocessing.Manager()
+            queue = manager.Queue()
+            with ExorcistPool(int(multiprocessing.cpu_count()/2)) as pool:
+
+                pool.apply_async(self._update_cache_file, (queue,))
+                jobs = list()
+                job_dict = dict()
+                for purchase_key in self.purchase_keys:
+                    job = pool.apply_async(self._process_order_id,
+                                                   (purchase_key, queue)
+                                                   )
+                    jobs.append(job)
+                    job_dict[purchase_key] = job
+
+                while job_dict:
+                    for key in list(job_dict):
+                        if job_dict[key].ready():
+                            del job_dict[key]
+                            # job finished
+                    time.sleep(1)
+
+                for job in jobs:
+                    job.get()
+
+                queue.put(CacheData("kill", "kill"))
+                pool.close()
+                pool.join()
+
 
     def _get_trove_download_url(self, machine_name, web_name):
         try:
@@ -109,8 +139,7 @@ class DownloadLibrary:
             web_name = download['url']['web'].split('/')[-1]
             ext = web_name.split('.')[-1]
             if self._should_download_file_type(ext) is False:
-                logger.info("Skipping the file {web_name}"
-                            .format(web_name=web_name))
+                logger.info("Skipping the file {web_name}".format(web_name=web_name))
                 continue
 
             cache_file_key = 'trove:{name}'.format(name=web_name)
@@ -192,7 +221,7 @@ class DownloadLibrary:
 
         return trove_products
 
-    def _process_order_id(self, order_id):
+    def _process_order_id(self, order_id, multiprocess_queue: multiprocessing.Queue):
         order_url = 'https://www.humblebundle.com/api/v1/order/{order_id}?all_tpkds=true'.format(order_id=order_id)  # noqa: E501
         try:
             order_r = self.session.get(
@@ -212,7 +241,7 @@ class DownloadLibrary:
         bundle_title = _clean_name(order['product']['human_name'])
         logger.info("Checking bundle: " + str(bundle_title))
         for product in order['subproducts']:
-            self._process_product(order_id, bundle_title, product)
+            self._process_product(order_id, bundle_title, product, multiprocess_queue)
 
     def _rename_old_file(self, local_filename, append_str):
         # Check if older file exists, if so rename
@@ -223,17 +252,14 @@ class DownloadLibrary:
                                append_str=append_str,
                                ext=filename_parts[1])
             os.rename(local_filename, new_name)
-            logger.info("Renamed older file to {new_name}"
-                        .format(new_name=new_name))
+            logger.info("Renamed older file to {new_name}".format(new_name=new_name))
 
-    def _process_product(self, order_id, bundle_title, product):
+    def _process_product(self, order_id, bundle_title, product, multiprocess_queue: multiprocessing.Queue):
         product_title = _clean_name(product['human_name'])
         # Get all types of download for a product
         for download_type in product['downloads']:
             if self._should_download_platform(download_type['platform']) is False:  # noqa: E501
-                logger.info("Skipping {platform} for {product_title}"
-                            .format(platform=download_type['platform'],
-                                    product_title=product_title))
+                logger.info("Skipping {platform} for {product_title}".format(platform=download_type['platform'],product_title=product_title))
                 continue
 
             product_folder = os.path.join(
@@ -248,17 +274,14 @@ class DownloadLibrary:
                 try:
                     url = file_type['url']['web']
                 except KeyError:
-                    logger.info("No url found: {bundle_title}/{product_title}"
-                                .format(bundle_title=bundle_title,
-                                        product_title=product_title))
+                    logger.info("No url found: {bundle_title}/{product_title}".format(bundle_title=bundle_title,product_title=product_title))
                     continue
 
                 url_filename = url.split('?')[0].split('/')[-1]
                 cache_file_key = order_id + ':' + url_filename
                 ext = url_filename.split('.')[-1]
                 if self._should_download_file_type(ext) is False:
-                    logger.info("Skipping the file {url_filename}"
-                                .format(url_filename=url_filename))
+                    logger.info("Skipping the file {url_filename}".format(url_filename=url_filename))
                     continue
 
                 local_filename = os.path.join(product_folder, url_filename)
@@ -302,6 +325,7 @@ class DownloadLibrary:
                         file_info,
                         local_filename,
                         rename_str=last_modified,
+                        multiprocess_queue=multiprocess_queue
                     )
 
     def _update_cache_data(self, cache_file_key, file_info):
@@ -316,8 +340,30 @@ class DownloadLibrary:
                 sort_keys=True, indent=4,
             )
 
+    def _update_cache_file(self, multiprocess_queue: multiprocessing.Queue):
+        """
+        Process safe cache update.
+        Can't use class member cache_data for any sort of process safety
+        :param multiprocess_queue:  the queue containing cache data
+        """
+        cache: dict
+        with open(self.cache_file, "r") as infile:
+            cache = json.load(infile)
+
+        with (open(self.cache_file, 'w') as outfile):
+            while 1:
+                cache_data:CacheData = multiprocess_queue.get(True, 2)
+                cache.update({cache_data.key: str(cache_data.value)})
+                if "kill" == cache_data.key:
+                    break
+                json.dump(
+                    cache, outfile,
+                    sort_keys=True, indent=4,
+                )
+                outfile.flush()
+
     def _process_download(self, open_r, cache_file_key, file_info,
-                          local_filename, rename_str=None):
+                          local_filename, rename_str=None, multiprocess_queue=None):
         try:
             if rename_str:
                 self._rename_old_file(local_filename, rename_str)
@@ -342,15 +388,18 @@ class DownloadLibrary:
             if self.progress_bar:
                 # Do not overwrite the progress bar on next print
                 print()
-            self._update_cache_data(cache_file_key, file_info)
+            if multiprocess_queue:
+                multiprocess_queue.put(CacheData(cache_file_key, file_info))
+            else:
+                self._update_cache_data(cache_file_key, file_info)
 
         finally:
             # Since its a stream connection, make sure to close it
             open_r.connection.close()
 
+
     def _download_file(self, product_r, local_filename):
-        logger.info("Downloading: {local_filename}"
-                    .format(local_filename=local_filename))
+        # logger.info()
 
         with open(local_filename, 'wb') as outfile:
             total_length = product_r.headers.get('content-length')
@@ -365,12 +414,12 @@ class DownloadLibrary:
                     pb_width = 50
                     done = int(pb_width * dl / total_length)
                     if self.progress_bar:
-                        print("\t{percent}% [{filler}{space}]"  # this is nice.
+                        print("\n Downloading: {local_filename} \t{percent}% [{filler}{space}]"  # this is nice.
                               .format(percent=int(done * (100 / pb_width)),
                                       filler='=' * done,
                                       space=' ' * (pb_width - done),
+                                      local_filename=os.path.basename(local_filename)
                                       ), end='\r')
-
                 if dl != total_length:
                     raise ValueError("Download did not complete")
 
