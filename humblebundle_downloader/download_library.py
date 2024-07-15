@@ -7,6 +7,7 @@ import logging
 import datetime
 import requests
 import http.cookiejar
+import hashlib
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +27,12 @@ class DownloadLibrary:
     def __init__(self, library_path, cookie_path=None, cookie_auth=None,
                  progress_bar=False, ext_include=None, ext_exclude=None,
                  platform_include=None, purchase_keys=None, trove=False,
-                 update=False):
+                 update=False, verify=False, verifyall=False, verifyonly=False):
         self.library_path = library_path
         self.progress_bar = progress_bar
+        self.verify = verify
+        self.verifyall = verifyall
+        self.verifyonly = verifyonly
         self.ext_include = [] if ext_include is None else list(map(str.lower, ext_include))  # noqa: E501
         self.ext_exclude = [] if ext_exclude is None else list(map(str.lower, ext_exclude))  # noqa: E501
 
@@ -62,14 +66,32 @@ class DownloadLibrary:
         self.cache_data = self._load_cache_data(self.cache_file)
         self.purchase_keys = self.purchase_keys if self.purchase_keys else self._get_purchase_keys()  # noqa: E501
 
-        if self.trove is True:
-            logger.info("Only checking the Humble Trove...")
-            for product in self._get_trove_products():
-                title = _clean_name(product['human-name'])
-                self._process_trove_product(title, product)
-        else:
-            for order_id in self.purchase_keys:
-                self._process_order_id(order_id)
+        #if we are only verifying, determine if we need to get information from web.
+        self.need_verify_update = False
+        if self.verifyonly is True:
+            for cache_file_key in self.cache_data.keys():
+                cache_purchase_key, cache_purchase_file = cache_file_key.split(":",1)
+                if self.trove is True:
+                    if (not('local_filename_rel' in cache_data[cache_file_key])) and (cache_purchase_key == 'trove'):
+                        self.need_verify_update=True
+                        break
+                else:
+                    if ((not('md5' in self.cache_data[cache_file_key])) or (not('local_filename_rel' in self.cache_data[cache_file_key]))) and (cache_purchase_key in self.purchase_keys):
+                        self.need_verify_update=True
+                        break
+
+        if (self.verifyonly is False) or (self.need_verify_update is True):
+            if self.trove is True:
+                logger.info("Only checking the Humble Trove...")
+                for product in self._get_trove_products():
+                    title = _clean_name(product['human-name'])
+                    self._process_trove_product(title, product)
+            else:
+                for order_id in self.purchase_keys:
+                    self._process_order_id(order_id)
+
+        if (self.verify is True) or (self.verifyonly is True) or (self.verifyall) is True:
+            self._verify_cache_files()
 
     def _get_trove_download_url(self, machine_name, web_name):
         try:
@@ -118,8 +140,20 @@ class DownloadLibrary:
                                 or download.get('timestamp')
                                 or product.get('date_added', '0')),
                 'md5': download.get('md5', 'UNKNOWN_MD5'),
+                'local_filename_rel': os.path.join('Humble Trove', title, web_name),
             }
             cache_file_info = self.cache_data.get(cache_file_key, {})
+
+            #If we are in verifyonly mode, update local file location and md5 if needed, then go to next file.
+            if self.verifyonly is True:
+                if not(cache_file_info == {}):
+                    if not('md5' in cache_file_info):
+                        cache_file_info['md5']=file_info['md5']
+                        self._update_cache_data(cache_file_key,cache_file_info)
+                    if not('local_filename_rel' in cache_file_info):
+                        cache_file_info['local_filename_rel']=file_info['local_filename_rel']
+                        self._update_cache_data(cache_file_key,cache_file_info)
+                continue
 
             if cache_file_info != {} and self.update is not True:
                 # Do not care about checking for updates at this time
@@ -264,6 +298,17 @@ class DownloadLibrary:
                 local_filename = os.path.join(product_folder, url_filename)
                 cache_file_info = self.cache_data.get(cache_file_key, {})
 
+                #If we are in verifyonly mode, update local file location and md5 if needed, then go to next file.
+                if self.verifyonly is True:
+                    if not(cache_file_info == {}):
+                        if not('md5' in cache_file_info):
+                            cache_file_info['md5']=file_type['md5']
+                            self._update_cache_data(cache_file_key,cache_file_info)
+                        if not('local_filename_rel' in cache_file_info):
+                            cache_file_info['local_filename_rel']=os.path.relpath(local_filename,self.library_path)
+                            self._update_cache_data(cache_file_key,cache_file_info)
+                    continue
+
                 if cache_file_info != {} and self.update is not True:
                     # Do not care about checking for updates at this time
                     continue
@@ -287,6 +332,8 @@ class DownloadLibrary:
                              .format(product_r=product_r, url=url))
                 file_info = {
                     'url_last_modified': product_r.headers['Last-Modified'],
+                    'md5': file_type['md5'],
+                    'local_filename_rel': os.path.relpath(local_filename,self.library_path),
                 }
                 if file_info['url_last_modified'] != cache_file_info.get('url_last_modified'):  # noqa: E501
                     if 'url_last_modified' in cache_file_info:
@@ -322,7 +369,7 @@ class DownloadLibrary:
             if rename_str:
                 self._rename_old_file(local_filename, rename_str)
 
-            self._download_file(open_r, local_filename)
+            self._download_file(open_r, local_filename, file_info)
 
         except (Exception, KeyboardInterrupt) as e:
             if self.progress_bar:
@@ -342,13 +389,17 @@ class DownloadLibrary:
             if self.progress_bar:
                 # Do not overwrite the progress bar on next print
                 print()
+            if 'md5' in file_info:
+                if ( file_info['md5'] != file_info['file_md5'] ):
+                    logger.warning("WARNING: Downloaded md5 mismatch in file {local_filename}\n    Web  md5:{md5}\n    File md5:{file_md5}"
+                                   .format(local_filename=local_filename,md5=file_info['md5'],file_md5=file_info['file_md5']))
             self._update_cache_data(cache_file_key, file_info)
 
         finally:
             # Since its a stream connection, make sure to close it
             open_r.connection.close()
 
-    def _download_file(self, product_r, local_filename):
+    def _download_file(self, product_r, local_filename, file_info):
         logger.info("Downloading: {local_filename}"
                     .format(local_filename=local_filename))
 
@@ -358,10 +409,12 @@ class DownloadLibrary:
                 outfile.write(product_r.content)
             else:
                 dl = 0
+                md5_hash = hashlib.md5()
                 total_length = int(total_length)
                 for data in product_r.iter_content(chunk_size=4096):
                     dl += len(data)
                     outfile.write(data)
+                    md5_hash.update(data)
                     pb_width = 50
                     done = int(pb_width * dl / total_length)
                     if self.progress_bar:
@@ -373,6 +426,7 @@ class DownloadLibrary:
 
                 if dl != total_length:
                     raise ValueError("Download did not complete")
+                file_info['file_md5'] = md5_hash.hexdigest()
 
     def _load_cache_data(self, cache_file):
         try:
@@ -411,3 +465,52 @@ class DownloadLibrary:
         elif self.ext_exclude != []:
             return ext not in self.ext_exclude
         return True
+
+    def _verify_cache_files(self):
+        print ("Verifying downloaded files...")
+        for cache_file_key in self.cache_data.keys():
+            cache_file_info = self.cache_data.get(cache_file_key, {})
+
+            #If file was already verified and verifyall is not set, skip to the next file.
+            if not(self.verifyall is True):
+                if 'verified' in cache_file_info:
+                    if cache_file_info['verified']:
+                        continue
+
+            if 'local_filename_rel' in cache_file_info:
+                local_filename = os.path.join(self.library_path, cache_file_info['local_filename_rel'])
+                md5_hash = hashlib.md5()
+                try:
+                    with open(local_filename,'rb') as f:
+                        #Generate md5 for the file on disk.
+                        for chunk in iter(lambda: f.read(4096), b''):
+                            md5_hash.update(chunk)
+
+                        if 'file_md5' in cache_file_info:
+                            #Check the md5 against the stored file md5 when we downloaded the file.
+                            if not(cache_file_info['file_md5'] == md5_hash.hexdigest()):
+                                logger.error("ERROR: Downloaded md5 mismatch in file {local_filename}\n    Saved   File md5:{file_md5}\n    Current File md5:{current_md5}"
+                                             .format(local_filename=local_filename,file_md5=cache_file_info['file_md5'],current_md5=md5_hash.hexdigest()))
+                                #continue on error so we won't mark the file as verified.
+                                continue
+                        else:
+                            #If md5 not stored when downloaded, store calculated md5 as the file md5.
+                            logger.info("Created initial file md5 for file {local_filename}"
+                                         .format(local_filename=local_filename))
+                            cache_file_info['file_md5'] = md5_hash.hexdigest()
+                            self._update_cache_data(cache_file_key,cache_file_info)
+
+                        #Warn if web md5 mismatches with file md5.
+                        if 'md5' in cache_file_info:
+                            if ( cache_file_info['md5'] != cache_file_info['file_md5'] ):
+                                logger.warning("WARNING: Downloaded md5 mismatch in file {local_filename}\n    Web  md5:{md5}\n    File md5:{file_md5}"
+                                               .format(local_filename=local_filename,md5=cache_file_info['md5'],file_md5=cache_file_info['file_md5']))
+
+                        #Mark file as verified.
+                        if not 'verified' in cache_file_info:
+                            cache_file_info['verified']=True
+                            self._update_cache_data(cache_file_key,cache_file_info)
+
+                except FileNotFoundError:
+                    logger.error("ERROR: Local file not found: {local_filename}"
+                                 .format(local_filename=local_filename))

@@ -55,6 +55,23 @@ def parse_args(args):
         action='store_true',
         help="Display progress bar for downloads",
     )
+    parser.add_argument(
+        '--verify',
+        action='store_true',
+        help="Verify downloaded files.",
+    )
+    parser.add_argument(
+        '--verifyall',
+        action='store_true',
+        help=("Verify previously downloaded files, "
+              "including those that have already been verified."),
+    )
+    parser.add_argument(
+        '--verifyonly',
+        action='store_true',
+        help=("Do not download new files, "
+              "only verify previously downloaded files."),
+    )
     filter_ext = parser.add_mutually_exclusive_group()
     filter_ext.add_argument(
         '-e', '--exclude',
@@ -92,4 +109,7 @@ def cli():
         purchase_keys=cli_args.keys,
         trove=cli_args.trove,
         update=cli_args.update,
+        verify=cli_args.verify,
+        verifyall=cli_args.verifyall,
+        verifyonly=cli_args.verifyonly,
     ).start()
