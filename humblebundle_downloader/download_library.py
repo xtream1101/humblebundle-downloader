@@ -365,8 +365,8 @@ class DownloadLibrary:
                     pb_width = 50
                     done = int(pb_width * dl / total_length)
                     if self.progress_bar:
-                        print("\t{percent}% [{filler}{space}]"
-                              .format(percent=int(done * (100 / pb_width)),
+                        print("\t{percent:3d}% [{filler}{space}]"
+                              .format(percent=done * 100 // pb_width,
                                       filler='=' * done,
                                       space=' ' * (pb_width - done),
                                       ), end='\r')
