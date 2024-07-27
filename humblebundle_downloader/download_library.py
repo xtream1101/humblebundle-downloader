@@ -59,6 +59,7 @@ class DownloadLibrary:
     def start(self):
 
         self.cache_file = os.path.join(self.library_path, '.cache.json')
+        self.cache_file_temp = os.path.join(self.library_path, '.tmp.cache.json')
         self.cache_data = self._load_cache_data(self.cache_file)
         self.purchase_keys = self.purchase_keys if self.purchase_keys else self._get_purchase_keys()  # noqa: E501
 
@@ -310,11 +311,13 @@ class DownloadLibrary:
         # quits it can keep track of the progress
         # Note: Only safe because of single thread,
         # need to change if refactor to multi threading
-        with open(self.cache_file, 'w') as outfile:
+        with open(self.cache_file_temp, 'w') as outfile:
             json.dump(
                 self.cache_data, outfile,
                 sort_keys=True, indent=4,
             )
+            outfile.close() #explicitly close outfile and flush output buffer.
+            os.rename(self.cache_file_temp,self.cache_file) #rename temp file to real file.
 
     def _process_download(self, open_r, cache_file_key, file_info,
                           local_filename, rename_str=None):
