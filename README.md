@@ -36,7 +36,9 @@ First thing to do is get your account cookies. This can be done by getting a bro
 
 ### 2. Downloading your library
 Use the following command to download your Humble Bundle Library:  
-`hbd --cookie-file cookies.txt --library-path "Downloaded Library" --progress`  
+`export HISTCONTROL=ignorespace
+ hbd -s "<COOKIE_VALUE>" --library-path "Downloaded Library" --progress
+ unset HISTCONTROL`
 
 This directory structure will be used:  
 `Downloaded Library/Purchase Name/Item Name/downloaded_file.ext`
