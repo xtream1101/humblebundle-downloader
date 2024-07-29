@@ -41,6 +41,7 @@ export HISTCONTROL=ignorespace
  hbd -s "<COOKIE_VALUE>" --library-path "Downloaded Library" --progress
 unset HISTCONTROL
 ```
+(Please note that the extraneous space before hbd prevents your cookie key from being saved to your machine's history.)
 
 This directory structure will be used:  
 `Downloaded Library/Purchase Name/Item Name/downloaded_file.ext`
