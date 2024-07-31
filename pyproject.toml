@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "humblebundle-downloader"
+version = "0.4.1"
+description = "Download your Humble Bundle library"
+authors = ["Eddy Hintze <eddy@gitx.codes>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.urls]
+homepage = "https://github.com/xtream1101/humblebundle-downloader"
+repository = "https://github.com/xtream1101/humblebundle-downloader"
+
+[tool.poetry.scripts]
+hbd = "humblebundle_downloader.cli:cli"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+requests = "^2.32.3"
+parsel = "^1.9.1"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.3.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
