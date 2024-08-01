@@ -9,7 +9,6 @@ pypi-package:
   stage: package
   only:
     - tags
-    - update
   script:
     - apt-get update -y && apt-get install -y curl
     - curl -sSL https://install.python-poetry.org | python3 -
