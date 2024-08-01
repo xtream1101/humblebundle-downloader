@@ -1,36 +1,21 @@
-image: python:3.7
+image: python:3.10
 
 stages:
-  - test
-  - release
   - package
+  - release
 
-flake8:
-  stage: test
-  except:
-    - tags
-  script:
-    - pip install tox
-    - tox -e flake8
-
-pytest:
-  stage: test
-  except:
-    - tags
-  script:
-    - pip install tox
-    - tox -e py37
 
 pypi-package:
   stage: package
   only:
     - tags
+    - update
   script:
-    - pip install twine
-    - rm -f dist/*
-    - python setup.py sdist
-    - twine upload -u ${PYPI_USER} -p ${PYPI_PASS} dist/*
-
+    - apt-get update -y && apt-get install -y curl
+    - curl -sSL https://install.python-poetry.org | python3 -
+    - export PATH="/root/.local/bin:$PATH"
+    - poetry build
+    - poetry publish
 
 .write_permission: &write_permission |
     git config --global user.email "gitlab-ci"; git config --global user.name "gitlab-ci"
@@ -43,6 +28,6 @@ tag:
     - main
   script:
     - *write_permission
-    - export VERSION=$(echo $(python -c "import humblebundle_downloader._version as v; print(v.__version__)"))
-    - git tag -a $VERSION -m "Version created by gitlab-ci Build"
+    - export VERSION=$(echo $(python -c "import importlib.metadata as v; print(v.version('humblebundle-downloader'))"))
+    - git tag -a $VERSION -m "Version created by gitlab-ci release"
     - git push origin $VERSION
