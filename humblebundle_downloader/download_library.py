@@ -8,6 +8,9 @@ import datetime
 import requests
 import http.cookiejar
 
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
 logger = logging.getLogger(__name__)
 
 
@@ -19,6 +22,24 @@ def _clean_name(dirty_str):
             clean.append(c)
 
     return "".join(clean).strip().rstrip('.')
+
+
+DEFAULT_TIMEOUT = 5  # seconds
+
+
+class TimeoutHTTPAdapter(HTTPAdapter):
+    def __init__(self, *args, **kwargs):
+        self.timeout = DEFAULT_TIMEOUT
+        if "timeout" in kwargs:
+            self.timeout = kwargs["timeout"]
+            del kwargs["timeout"]
+        super().__init__(*args, **kwargs)
+
+    def send(self, request, **kwargs):
+        timeout = kwargs.get("timeout")
+        if timeout is None:
+            kwargs["timeout"] = self.timeout
+        return super().send(request, **kwargs)
 
 
 class DownloadLibrary:
@@ -41,7 +62,13 @@ class DownloadLibrary:
         self.trove = trove
         self.update = update
 
+        retries = Retry(total=3, backoff_factor=1,
+                        status_forcelist=[429, 500, 502, 503, 504])
+        timeout_adapter = TimeoutHTTPAdapter(max_retries=retries)
+
         self.session = requests.Session()
+        self.session.mount('http://', timeout_adapter)
+        self.session.mount('https://', timeout_adapter)
         if cookie_path:
             try:
                 cookie_jar = http.cookiejar.MozillaCookieJar(cookie_path)
@@ -131,8 +158,10 @@ class DownloadLibrary:
                     self.library_path, 'Humble Trove', title
                 )
                 # Create directory to save the files to
-                try: os.makedirs(product_folder)  # noqa: E701
-                except OSError: pass  # noqa: E701
+                try:
+                    os.makedirs(product_folder)  # noqa: E701
+                except OSError:
+                    pass  # noqa: E701
                 local_filename = os.path.join(
                     product_folder,
                     web_name,
@@ -240,8 +269,10 @@ class DownloadLibrary:
                 self.library_path, bundle_title, product_title
             )
             # Create directory to save the files to
-            try: os.makedirs(product_folder)  # noqa: E701
-            except OSError: pass  # noqa: E701
+            try:
+                os.makedirs(product_folder)  # noqa: E701
+            except OSError:
+                pass  # noqa: E701
 
             # Download each file type of a product
             for file_type in download_type['download_struct']:
@@ -332,8 +363,10 @@ class DownloadLibrary:
                          .format(local_filename=local_filename))
 
             # Clean up broken downloaded file
-            try: os.remove(local_filename)  # noqa: E701
-            except OSError: pass  # noqa: E701
+            try:
+                os.remove(local_filename)  # noqa: E701
+            except OSError:
+                pass  # noqa: E701
 
             if type(e).__name__ == 'KeyboardInterrupt':
                 sys.exit()
