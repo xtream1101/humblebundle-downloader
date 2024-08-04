@@ -30,3 +30,20 @@ tag:
     - export VERSION=$(grep -m 1 version pyproject.toml | tr -s ' ' | tr -d '"' | tr -d "'" | cut -d' ' -f3)
     - git tag -a $VERSION -m "Version created by gitlab-ci release"
     - git push origin $VERSION
+
+build_image:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  only:
+    - main
+    - update
+  script:
+        - export VERSION=$(grep -m 1 version pyproject.toml | tr -s ' ' | tr -d '"' | tr -d "'" | cut -d' ' -f3)
+        - export LATEST_IMAGE_TAG=ghcr.io/${GH_REGISTRY_USER}/humblebundle-downloader:latest
+        - export VERSION_IMAGE_TAG=ghcr.io/${GH_REGISTRY_USER}/humblebundle-downloader:$VERSION
+        - echo $GH_REGISTRY_PASSWORD | docker login -u $GH_REGISTRY_USER ghcr.io --password-stdin
+        - docker build -t $LATEST_IMAGE_TAG -t $VERSION_IMAGE_TAG .
+        - docker push $LATEST_IMAGE_TAG
+        - docker push $VERSION_IMAGE_TAG

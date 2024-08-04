@@ -35,7 +35,8 @@ This can be done by getting a browser extension that lets you see or export your
 
 - **Method 1 (recommended)**
     - Get the value of the cookie called `_simpleauth_sess` and pass that value using `-s 'COOKIE_VALUE'`
-    - Note: The quotes in the cookie value are part of the value, you might need to wrap the entire value (including double quotes) in single quotes.
+    - Note: The quotes in the cookie value are part of the value, you might need to wrap the entire value
+      (including double quotes) in single quotes. Some suggestions for common issues can be found in [issue #50](https://github.com/xtream1101/humblebundle-downloader/issues/50)
 
 - **Method 2**
     - Export the cookies in the Netscape format using an extension.  
