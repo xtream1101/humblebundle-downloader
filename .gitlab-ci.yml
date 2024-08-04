@@ -38,7 +38,6 @@ build_image:
     - docker:dind
   only:
     - main
-    - update
   script:
         - export VERSION=$(grep -m 1 version pyproject.toml | tr -s ' ' | tr -d '"' | tr -d "'" | cut -d' ' -f3)
         - export LATEST_IMAGE_TAG=ghcr.io/${GH_REGISTRY_USER}/humblebundle-downloader:latest

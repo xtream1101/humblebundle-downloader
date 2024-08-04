@@ -6,6 +6,6 @@ WORKDIR /app
 
 COPY . .
 
-RUN poetry config virtualenvs.create false && poetry install --no-dev
+RUN poetry config virtualenvs.create false && poetry install --only main
 
 ENTRYPOINT ["hbd"]

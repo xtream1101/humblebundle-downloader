@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "humblebundle-downloader"
-version = "0.4.1"
+version = "0.4.2"
 description = "Download your Humble Bundle library"
 authors = ["Eddy Hintze <eddy@gitx.codes>"]
 license = "MIT"

@@ -22,7 +22,16 @@ After that it will only download the content that has been updated or is missing
 
 ## Install
 
+
+### Using PIP
+
 `pip install humblebundle-downloader`
+
+
+### Using docker
+
+Remember to mount your download directory in the container using dockers `-v` argument.
+`docker run ghcr.io/xtream1101/humblebundle-downloader -h`
 
 
 ## Instructions
@@ -48,6 +57,7 @@ This can be done by getting a browser extension that lets you see or export your
 
 Use the following command to download your Humble Bundle Library:  
 `hbd --cookie-file cookies.txt --library-path "Downloaded Library" --progress`  
+_If using the docker image, exclude the `hbd` part of the command_
 
 This directory structure will be used:  
 `Downloaded Library/Purchase Name/Item Name/downloaded_file.ext`

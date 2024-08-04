@@ -4,6 +4,7 @@
 ## 0.4.2
 
 - Added public docker image
+- New version just to make sure the updated ci/cd pipeline is working, no code changes in this release
 
 
 ## 0.4.1
