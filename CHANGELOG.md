@@ -1,6 +1,11 @@
 # Change log
 
 
+## 0.4.2
+
+- Added public docker image
+
+
 ## 0.4.1
 
 - Fixed crash when missing cli args ([#48](https://github.com/xtream1101/humblebundle-downloader/pull/48))
