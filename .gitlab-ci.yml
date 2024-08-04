@@ -27,6 +27,6 @@ tag:
     - main
   script:
     - *write_permission
-    - export VERSION=$(echo $(python -c "import importlib.metadata as v; print(v.version('humblebundle-downloader'))"))
+    - export VERSION=$(grep -m 1 version pyproject.toml | tr -s ' ' | tr -d '"' | tr -d "'" | cut -d' ' -f3)
     - git tag -a $VERSION -m "Version created by gitlab-ci release"
     - git push origin $VERSION
