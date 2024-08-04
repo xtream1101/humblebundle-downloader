@@ -45,7 +45,12 @@ This can be done by getting a browser extension that lets you see or export your
 ### 2. Downloading your library
 
 Use the following command to download your Humble Bundle Library:  
-`hbd --cookie-file cookies.txt --library-path "Downloaded Library" --progress`  
+```bash
+export HISTCONTROL=ignorespace
+ hbd -s "<COOKIE_VALUE>" --library-path "Downloaded Library" --progress
+unset HISTCONTROL
+```
+(Please note that the extraneous space before hbd prevents your cookie key from being saved to your machine's history.)
 
 This directory structure will be used:  
 `Downloaded Library/Purchase Name/Item Name/downloaded_file.ext`
