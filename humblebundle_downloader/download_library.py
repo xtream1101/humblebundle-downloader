@@ -124,9 +124,7 @@ class DownloadLibrary:
                 continue
 
             web_name = download["url"]["web"].split("/")[-1]
-            ext = web_name.split(".")[-1]
-            if self._should_download_file_type(ext) is False:
-                logger.info("Skipping the file {web_name}".format(web_name=web_name))
+            if self._should_download_file_by_ext_and_log(web_name) is False:
                 continue
 
             cache_file_key = "trove:{name}".format(name=web_name)
@@ -270,75 +268,166 @@ class DownloadLibrary:
             # Download each file type of a product
             for file_type in download_type["download_struct"]:
                 try:
-                    url = file_type["url"]["web"]
-                except KeyError:
-                    logger.info(
-                        "No url found: {bundle_title}/{product_title}".format(
-                            bundle_title=bundle_title, product_title=product_title
+                    if "url" in file_type and "web" in file_type["url"]:
+                        # downloadable URL
+                        url = file_type["url"]["web"]
+
+                        url_filename = url.split("?")[0].split("/")[-1]
+
+                        if (
+                            self._should_download_file_by_ext_and_log(url_filename)
+                            is False
+                        ):
+                            continue
+
+                        cache_file_key = order_id + ":" + url_filename
+                        try:
+                            self._check_cache_and_download(
+                                cache_file_key, url, product_folder, url_filename
+                            )
+                        except FileExistsError:
+                            continue
+                        except Exception:
+                            logger.exception("Failed to download {url}".format(url=url))
+                    elif "asm_config" in file_type:
+                        # asm.js game playable directly in the browser
+                        game_name = file_type["asm_config"]["display_item"]
+                        local_folder = os.path.join(product_folder, game_name)
+                        # Create directory to save the files to
+                        try:
+                            os.makedirs(local_folder, exist_ok=True)  # noqa: E701
+                        except OSError:
+                            pass  # noqa: E701
+
+                        # get the HTML file that presents the game, used in the Humble web interface iframe
+                        asmjs_html_filename = game_name + ".html"
+                        asmjs_local_html_filename = game_name + ".local.html"
+                        cache_file_key = order_id + ":" + asmjs_html_filename
+                        # game_name might be "game" or "game_asm" but the path to the file here always uses the "game_asm" version
+                        game_asm_name = file_type["asm_manifest"]["asmFile"].split("/")[
+                            2
+                        ]
+                        asmjs_url = (
+                            "https://www.humblebundle.com/play/asmjs/"
+                            + game_asm_name
+                            + "/"
+                            + order_id
                         )
-                    )
-                    continue
 
-                url_filename = url.split("?")[0].split("/")[-1]
-                cache_file_key = order_id + ":" + url_filename
-                ext = url_filename.split(".")[-1]
-                if self._should_download_file_type(ext) is False:
-                    logger.info(
-                        "Skipping the file {url_filename}".format(
-                            url_filename=url_filename
+                        if (
+                            self._should_download_file_by_ext_and_log(
+                                asmjs_html_filename
+                            )
+                            is False
+                        ):
+                            continue
+
+                        downloaded = False
+                        try:
+                            downloaded = self._check_cache_and_download(
+                                cache_file_key,
+                                asmjs_url,
+                                local_folder,
+                                asmjs_html_filename,
+                            )
+                        except FileExistsError:
+                            pass  # we should download the asm/data files even if the html file was previously downloaded
+                        except Exception:
+                            logger.exception(
+                                "Failed to download {asmjs_url}".format(
+                                    asmjs_url=asmjs_url
+                                )
+                            )
+                            continue
+
+                        # read from the html file a version of file_type['asm_manifest'] with HMAC/etc auth params on the URLs
+                        with open(
+                            os.path.join(local_folder, asmjs_html_filename), "r"
+                        ) as asmjs_html:
+                            asmjs_page = parsel.Selector(text=asmjs_html.read())
+                            asm_player_data_text = asmjs_page.css(
+                                "#webpack-asm-player-data::text"
+                            ).get()  # noqa: E501
+                            asm_player_data = json.loads(asm_player_data_text)
+
+                        if downloaded:
+                            # create the local playable version of the html file
+                            # by replacing remote manifest URLs with the local filename
+                            try:
+                                with open(
+                                    os.path.join(local_folder, asmjs_html_filename), "r"
+                                ) as asmjs_html:
+                                    with open(
+                                        os.path.join(
+                                            local_folder, asmjs_local_html_filename
+                                        ),
+                                        "w",
+                                    ) as asmjs_local_html:
+                                        for line in asmjs_html:
+                                            for (
+                                                local_filename,
+                                                remote_file,
+                                            ) in asm_player_data["asmOptions"][
+                                                "manifest"
+                                            ].items():
+                                                line = line.replace(
+                                                    f'"{local_filename}": "{remote_file}"',
+                                                    f'"{local_filename}": "{local_filename}"',
+                                                )
+                                            asmjs_local_html.write(line)
+                            except Exception:
+                                logger.exception(
+                                    "Failed to create local version of {asmjs_html_filename}".format(
+                                        asmjs_html_filename=asmjs_html_filename
+                                    )
+                                )
+
+                        # TODO deduplicate these files? Osmos example has 3 unique files and 2 dupes with different names
+                        for local_filename, remote_file in asm_player_data[
+                            "asmOptions"
+                        ]["manifest"].items():
+                            cache_file_key = (
+                                order_id + ":" + game_name + ":" + local_filename
+                            )
+                            try:
+                                self._check_cache_and_download(
+                                    cache_file_key,
+                                    remote_file,
+                                    local_folder,
+                                    local_filename,
+                                )
+                            except FileExistsError:
+                                continue
+                            except Exception:
+                                logger.exception(
+                                    "Failed to download {url}".format(url=url)
+                                )
+                                continue
+
+                    elif "external_link" in file_type:
+                        logger.info(
+                            "External url found: {bundle_title}/{product_title} : {url}".format(
+                                bundle_title=bundle_title,
+                                product_title=product_title,
+                                url=file_type["external_link"],
+                            )
                         )
-                    )
-                    continue
 
-                local_filename = os.path.join(product_folder, url_filename)
-                cache_file_info = self.cache_data.get(cache_file_key, {})
-
-                if cache_file_info != {} and self.update is not True:
-                    # Do not care about checking for updates at this time
-                    continue
-
-                try:
-                    product_r = self.session.get(url, stream=True)
-                except Exception:
-                    logger.error("Failed to download {url}".format(url=url))
-                    continue
-
-                # Check to see if the file still exists
-                if product_r.status_code != 200:
-                    logger.debug(
-                        "File missing for {bundle_title}/{product_title}: {url}".format(
-                            bundle_title=bundle_title,
-                            product_title=product_title,
-                            url=url,
-                        )
-                    )
-                    continue
-
-                logger.debug(
-                    "Item request: {product_r}, Url: {url}".format(
-                        product_r=product_r, url=url
-                    )
-                )
-                file_info = {
-                    "url_last_modified": product_r.headers["Last-Modified"],
-                }
-                if file_info["url_last_modified"] != cache_file_info.get(
-                    "url_last_modified"
-                ):
-                    if "url_last_modified" in cache_file_info:
-                        last_modified = datetime.datetime.strptime(
-                            cache_file_info["url_last_modified"],
-                            "%a, %d %b %Y %H:%M:%S %Z",
-                        ).strftime("%Y-%m-%d")
                     else:
-                        last_modified = None
-                    self._process_download(
-                        product_r,
-                        cache_file_key,
-                        file_info,
-                        local_filename,
-                        rename_str=last_modified,
+                        logger.info(
+                            "No downloadable url(s) found: {bundle_title}/{product_title}".format(
+                                bundle_title=bundle_title, product_title=product_title
+                            )
+                        )
+                        logger.info(file_type)
+                        continue
+                except Exception:
+                    logger.exception(
+                        "Failed to download this 'file':\n{file_type}".format(
+                            file_type=file_type
+                        )
                     )
+                    continue
 
     def _update_cache_data(self, cache_file_key, file_info):
         self.cache_data[cache_file_key] = file_info
@@ -353,6 +442,66 @@ class DownloadLibrary:
                 sort_keys=True,
                 indent=4,
             )
+
+    def _check_cache_and_download(
+        self, cache_file_key, remote_file, local_folder, local_filename
+    ):
+        cache_file_info = self.cache_data.get(cache_file_key, {})
+
+        if cache_file_info != {} and self.update is not True:
+            # Do not care about checking for updates at this time
+            raise FileExistsError
+
+        try:
+            remote_file_r = self.session.get(remote_file, stream=True)
+        except Exception:
+            logger.exception(
+                "Failed to download {remote_file}".format(remote_file=remote_file)
+            )
+            return False
+
+        # Check to see if the file still exists
+        if remote_file_r.status_code != 200:
+            logger.debug(
+                "File unavailable {remote_file} status code {status_code}".format(
+                    remote_file=remote_file, status_code=remote_file_r.status_code
+                )
+            )
+            return False
+
+        logger.debug(
+            "Item request: {remote_file_r}, Url: {remote_file}".format(
+                remote_file_r=remote_file_r, remote_file=remote_file
+            )
+        )
+        file_info = {}
+        if "Last-Modified" in remote_file_r.headers:
+            file_info["url_last_modified"] = remote_file_r.headers["Last-Modified"]
+            if file_info["url_last_modified"] == cache_file_info.get(
+                "url_last_modified"
+            ):
+                return False
+        if "url_last_modified" in cache_file_info:
+            last_modified = datetime.datetime.strptime(
+                cache_file_info["url_last_modified"], "%a, %d %b %Y %H:%M:%S %Z"
+            ).strftime("%Y-%m-%d")
+        else:
+            last_modified = None
+
+        local_file = os.path.join(local_folder, local_filename)
+        # Create directory to save the file to, which might not exist if there's a subdirectory included
+        try:
+            os.makedirs(os.path.dirname(local_file), exist_ok=True)  # noqa: E701
+        except OSError:
+            raise  # noqa: E701
+
+        return self._process_download(
+            remote_file_r,
+            cache_file_key,
+            file_info,
+            local_file,
+            rename_str=last_modified,
+        )
 
     def _process_download(
         self, open_r, cache_file_key, file_info, local_filename, rename_str=None
@@ -382,15 +531,24 @@ class DownloadLibrary:
             if type(e).__name__ == "KeyboardInterrupt":
                 sys.exit()
 
+            return False
+
         else:
             if self.progress_bar:
                 # Do not overwrite the progress bar on next print
                 print()
+            if "url_last_modified" not in file_info:
+                # no Last-Modified header so we set the time of the current download
+                # this will result in the file not being re-downloaded by default later
+                file_info["url_last_modified"] = datetime.datetime.now().strftime(
+                    "%a, %d %b %Y %H:%M:%S %Z"
+                )
             self._update_cache_data(cache_file_key, file_info)
 
         finally:
             # Since its a stream connection, make sure to close it
             open_r.connection.close()
+            return True
 
     def _download_file(self, product_r, local_filename):
         logger.info(
@@ -400,7 +558,15 @@ class DownloadLibrary:
         with open(local_filename, "wb") as outfile:
             total_length = product_r.headers.get("content-length")
             if total_length is None:  # no content length header
-                outfile.write(product_r.content)
+                dl = 0
+                for data in product_r.iter_content(chunk_size=4096):
+                    dl += len(data)
+                    outfile.write(data)
+                    if self.progress_bar:
+                        print(
+                            "\t{dl}".format(dl=dl),
+                            end="\r",
+                        )
             else:
                 dl = 0
                 total_length = int(total_length)
@@ -413,14 +579,17 @@ class DownloadLibrary:
                         print(
                             "\t{percent}% [{filler}{space}]".format(
                                 percent=int(done * (100 / pb_width)),
-                                filler="=" * done,
-                                space=" " * (pb_width - done),
+                                filler="=" * min(max(done, 0), pb_width),
+                                space=" " * min(max((pb_width - done), 0), pb_width),
                             ),
                             end="\r",
                         )
 
-                if dl != total_length:
+                if dl < total_length:
                     raise ValueError("Download did not complete")
+                if dl > total_length:
+                    print()
+                    logger.warn("Downloaded more content than expected")
 
     def _load_cache_data(self, cache_file):
         try:
@@ -454,7 +623,17 @@ class DownloadLibrary:
             return False
         return True
 
-    def _should_download_file_type(self, ext):
+    def _should_download_file_by_ext_and_log(self, filename):
+        if self._should_download_file_by_ext(filename) is False:
+            logger.info("Skipping the file {filename}".format(filename=filename))
+            return False
+        return True
+
+    def _should_download_file_by_ext(self, filename):
+        ext = filename.split(".")[-1]
+        return self._should_download_ext(ext)
+
+    def _should_download_ext(self, ext):
         ext = ext.lower()
         if self.ext_include != []:
             return ext in self.ext_include
