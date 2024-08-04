@@ -32,7 +32,7 @@ tag:
     - git push origin $VERSION
 
 build_image:
-  stage: build
+  stage: release
   image: docker:latest
   services:
     - docker:dind
