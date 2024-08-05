@@ -1,6 +1,11 @@
 # Change log
 
 
+## 0.4.3
+
+- Added support for asm games ([#75](https://github.com/xtream1101/humblebundle-downloader/pull/75))
+
+
 ## 0.4.2
 
 - Added public docker image
